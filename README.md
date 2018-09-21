@@ -15,14 +15,14 @@ When Commiting
 Write your commits in this format
 
 > Title of Commit
-> - More information
-> - Further information
+> -- More information
+> -- Further information
 
 for example
 
 > Fixed Generation
-> - Fixed math in procedural calculation
-> - Added correct objects for generating
+> -- Fixed math in procedural calculation
+> -- Added correct objects for generating
 
 When Merging
 -
