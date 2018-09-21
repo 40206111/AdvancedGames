@@ -20,7 +20,7 @@ Write your commits in this format
 
 for example
 
-> Fixing Generation
+> Fixed Generation
 > - Fixed math in procedural calculation
 > - Added correct objects for generating
 
