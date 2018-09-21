@@ -1,14 +1,17 @@
 # AdvancedGames
 Repository for class to use for joint Advanced Game Engineering project
 
-# Branching Rules
-Before begining please branch of dev to your own branch.
+Branching Rules
+-
+Before begining please branch from dev to your own branch.
 Prefix any branch you make with your own name incase people name branches similarly and get confused. (e.g. Emma-dev)
 
-# Large Files (Images/Objects)
+Large Files (Images/Objects)
+-
 We are using gitLFS to store large files like images and objs. This should work automatically provided you keep those kind of files in the resources folder as this has been whitelisted.
 
-# When Commiting
+When Commiting
+-
 Write your commits in this format
 
 Title of Commit
@@ -18,4 +21,10 @@ Title of Commit
 for example
 
 Fixing Generation
-- 
+- Fixed math in procedural calculation
+- Added correct objects for generating
+
+When Merging
+-
+DON'T merge into dev or master.
+If you think your code is ready to be merged for other people to work with create a pull request. This will then be merged once reviewed
