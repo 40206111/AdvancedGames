@@ -33,4 +33,9 @@ for example
 When Merging
 -
 DON'T merge into dev or master.
-If you think your code is ready to be merged for other people to work with create a pull request. This will then be merged once reviewed
+If you think your code is ready to be merged for other people to work with create a pull request.
+Each pull request needs to pass continous integration and be reviewed by at least one other person.
+
+Project not working?
+-
+Make sure you've retargetted the project and you're running x86.
