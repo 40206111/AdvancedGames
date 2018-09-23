@@ -1,6 +1,8 @@
 # AdvancedGames
 Repository for class to use for joint Advanced Game Engineering project
 
+[![Build status](https://ci.appveyor.com/api/projects/status/jf9e1m0ctk4fko3t/branch/master?svg=true)](https://ci.appveyor.com/project/40206111/advancedgames/branch/master)
+
 Branching Rules
 -
 Before begining please branch from dev to your own branch.
