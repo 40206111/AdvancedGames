@@ -38,4 +38,4 @@ Each pull request needs to pass continous integration and be reviewed by at leas
 
 Project not working?
 -
-Make sure you've retargetted the project and you're running x86.
+Make sure you've retargeted the project and you're running x86.
