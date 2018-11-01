@@ -50,6 +50,7 @@ bool Texture2D::loadTexture(const string& filename, bool generateMipMaps) {
 	// unbind image
 	glBindTexture(GL_TEXTURE_2D, 0);
 
+	return true;
 }
 
 void Texture2D::bind(GLuint var) {

@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
 		CREATE SCENE
 	*/
 	//PolyMesh mesh = PolyMesh::PolyMesh(vertices, 6, 3); // create model from list of vertices and associated UVs
-	PolyMesh mesh = PolyMesh::PolyMesh(PolyMesh::QUAD);
+	PolyMesh mesh = PolyMesh::PolyMesh("./resources/models/coral_hard_02.obj");
 	// material
 	Phong phong = Phong::Phong(glm::vec3(.2f,.2f,.2f), glm::vec3(.5f, .2f, .2f), glm::vec3(.2f, .2f, .2f), 12);
 	// Model

@@ -6,6 +6,44 @@
 
 PolyMesh::PolyMesh() {}
 
+
+
+// create mesh from a .obj file
+PolyMesh::PolyMesh(const string& fileName)
+{
+	initMesh(OBJModel(fileName).ToIndexedModel());
+}
+
+void PolyMesh::initMesh(const IndexedModel& model) {
+	m_vertexNum = model.indices.size();
+
+	glGenVertexArrays(1, &m_vao);
+	glBindVertexArray(m_vao);
+
+	// vertex buffer
+	glGenBuffers(1, &m_vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(model.positions[0]) * model.positions.size(), &model.positions[0], GL_STATIC_DRAW);
+
+	// normal buffer
+	glGenBuffers(1, &m_nbo);
+	glBindBuffer(GL_ARRAY_BUFFER, m_nbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(model.normals[0]) * model.normals.size(), &model.normals[0], GL_STATIC_DRAW);
+
+	// vertices
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+	// normals
+	glEnableVertexAttribArray(2);
+	glBindBuffer(GL_ARRAY_BUFFER, m_nbo);
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+	glBindVertexArray(0);
+
+}
+
 PolyMesh::PolyMesh(PrimitiveType type)
 {
 	m_creationMode = SIMPLE;
@@ -148,7 +186,7 @@ PolyMesh::PolyMesh(PrimitiveType type)
 
 		break;
 	}
-	
+
 	initMesh(vertices, UVs, normals);
 }
 
@@ -318,17 +356,16 @@ void PolyMesh::createUniqueVertices() {
 	}
 }
 
-void PolyMesh::deleteMesh(){
+void PolyMesh::deleteMesh() {
 	glDeleteVertexArrays(1, &m_vao);
 	glDeleteBuffers(1, &m_vbo);
 }
 
 void PolyMesh::bindGeometry() {
 	glBindVertexArray(getVAO());
-
 }
 
-void PolyMesh::draw(const Application &app){
+void PolyMesh::draw(const Application &app) {
 	// draw geometry
 	switch (getCreationMode()) {
 	case PolyMesh::SIMPLE:
@@ -341,7 +378,6 @@ void PolyMesh::draw(const Application &app){
 		break;
 	}
 	glBindVertexArray(0);
-
 }
 
 

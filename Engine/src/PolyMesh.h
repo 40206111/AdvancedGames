@@ -2,6 +2,7 @@
 
 #include "Geometry.h"
 #include "Transform.h"
+#include "OBJLoader.h"
 
 // GLM
 #include <glm/glm.hpp>
@@ -44,10 +45,15 @@ public:
 	// create mesh from primitive type (triangle, quad, cube)
 	PolyMesh(PrimitiveType type);
 
+	// create mesh from obj file
+	PolyMesh(const string& name);
+
 	// create geometry buffers
 	void initMesh(glm::vec3* vertices, glm::vec2* UVs, glm::vec3* normals);
 
 	void initMesh(GLfloat* vertices, glm::vec2* UVs, glm::vec3* normals);
+
+	void initMesh(const IndexedModel& model);
 
 
 	// accessors

@@ -1,7 +1,7 @@
 #include <iostream>
 #include <SDL.h>
 
-#include "Raytracer.h";
+#include "Raytracer.h"
 
 
 

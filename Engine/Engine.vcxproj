@@ -22,6 +22,7 @@
     <ClCompile Include="src\Application.cpp" />
     <ClCompile Include="src\Engine.cpp" />
     <ClCompile Include="src\GLFWApplication.cpp" />
+    <ClCompile Include="src\OBJLoader.cpp" />
     <ClCompile Include="src\PolyMesh.cpp" />
     <ClCompile Include="src\Rasterizer\Rasterizer.cpp" />
     <ClCompile Include="src\Raytracer\Raytracer.cpp" />
@@ -34,6 +35,7 @@
     <ClInclude Include="src\GLFWApplication.h" />
     <ClInclude Include="src\Material.h" />
     <ClInclude Include="src\Model.h" />
+    <ClInclude Include="src\OBJLoader.h" />
     <ClInclude Include="src\Phong.h" />
     <ClInclude Include="src\Rasterizer\Rasterizer.h" />
     <ClInclude Include="src\Raytracer\Raytracer.h" />
@@ -48,7 +50,7 @@
     <ProjectGuid>{9013294B-CA76-4C4B-ACAC-99B6B331A07C}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>Engine</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
