@@ -22,6 +22,7 @@
 #include "Scene.h"
 #include "Rasterizer/Rasterizer.h"
 #include "Raytracer/Raytracer.h"
+#include "../TerrainGraph.h"
 
 
 int main(int argc, char *argv[])
