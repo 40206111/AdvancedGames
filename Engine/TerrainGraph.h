@@ -2,8 +2,8 @@
 #include <glm/glm.hpp>
 #include <vector>
 
-enum TerrainShape { PEAK, PIT, RIDGE, TROUGH, HILLTOP, HILLBASE, SLOPE, FLAT, SADDLE };
-enum EdgeType { DEFAULT, RIDGE, TROUGH, WATERSHED };
+enum TerrainShape { PEAK, PIT, RIDGE_V, TROUGH_V, HILLTOP, HILLBASE, SLOPE, FLAT, SADDLE };
+enum EdgeType { DEFAULT, RIDGE_E, TROUGH_E, WATERSHED };
 
 class TerrainEdge;
 

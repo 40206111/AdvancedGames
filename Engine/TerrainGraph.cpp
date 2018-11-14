@@ -1,4 +1,4 @@
-#define _USE_MATH_DEFINES;
+#define _USE_MATH_DEFINES
 
 #include "TerrainGraph.h"
 #include <math.h>
@@ -25,7 +25,7 @@ float CalculateGradientHelp(glm::vec3 diff) {
 	// Squared difference in horizontal change
 	float h2 = diff.x * diff.x + diff.z * diff.z;
 	// Difference in horizontal change (initialised to very small value to avoid dividing by 0)
-	float h = 0.0001;
+	float h = 0.0001f;
 	// If horizontal difference is not 0 assign actual difference
 	if (h2 > 0.0f) {
 		h = sqrtf(h2);
@@ -91,10 +91,9 @@ void TerrainVertex::CalculateShape() {
 		}
 	}
 
-	switch (simplify.size())
-	{
-		// If only one item exists in simplify
-	case(1):
+	int simSize = simplify.size();
+	// If only one item exists in simplify
+	if (simSize == 0) {
 		// Edges slope up from vertex
 		if (simplify[0].second > 1.0f) {
 			m_shape = PIT;
@@ -107,9 +106,9 @@ void TerrainVertex::CalculateShape() {
 		else {
 			m_shape = FLAT;
 		}
-		break;
-		// If two distinct edge groups
-	case(2):
+	}
+	// If two distinct edge groups
+	else if (simSize == 2) {
 		// Stores gradient of a non-flat group if a flat group exists
 		float nonFlat = 0.0f;
 		// For both groups
@@ -134,12 +133,12 @@ void TerrainVertex::CalculateShape() {
 		else {
 			m_shape = SLOPE;
 		}
-		break;
-		// If all groups exist (-,=,+)
-	case(3):
+	}
+	// If all groups exist (-,=,+)
+	else if (simSize == 3) {
 		m_shape = SLOPE;
-		break;
-	case(4):
+	}
+	else if (simSize == 4) {
 		// Counting variables
 		int countPos = 0;
 		int countNeg = 0;
@@ -164,22 +163,21 @@ void TerrainVertex::CalculateShape() {
 			}
 			// If opposing - and = group
 			else {
-				m_shape = TerrainShape::TROUGH;
+				m_shape = TROUGH_V;
 			}
 		}
 		// If opposing - groups (saddle taken care of above)
 		else if (countNeg == 2.0f) {
-			m_shape = TerrainShape::RIDGE;
+			m_shape = RIDGE_V;
 		}
 		// If opposing = groups
 		else {
 			m_shape = SLOPE;
 		}
-		break;
-		// If more than 4 groups (or no groups)
-	default:
+	}
+	// If more than 4 groups (or no groups)
+	else {
 		m_shape = SADDLE;
-		break;
 	}
 }
 
