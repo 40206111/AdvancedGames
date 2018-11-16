@@ -39,9 +39,12 @@ int main(int argc, char *argv[])
 		CREATE SCENE
 	*/
 	//PolyMesh mesh = PolyMesh::PolyMesh(vertices, 6, 3); // create model from list of vertices and associated UVs
+	//detail cliff tris.obj
+	//coral_hard_02.obj
+	//mesh1-8k-tris.OBJ
 	PolyMesh mesh = PolyMesh::PolyMesh("./resources/models/detail cliff tris.obj");
 	// material
-	Phong phong = Phong::Phong(glm::vec3(.2f,.2f,.2f), glm::vec3(.5f, .2f, .2f), glm::vec3(.2f, .2f, .2f), 12);
+	Phong phong = Phong::Phong(glm::vec3(.2f, .2f, .2f), glm::vec3(.5f, .2f, .2f), glm::vec3(.2f, .2f, .2f), 12);
 	// Model
 	Model quad = Model::Model(&mesh, phong);
 
@@ -56,13 +59,13 @@ int main(int argc, char *argv[])
 	cout << "Pre-analysis" << endl;
 	graph.AnalyseGraph();
 	cout << "Pre-colouring" << endl;
-	graph.ColourResults();
+	//graph.ColourResults();
 	cout << "Graph done" << endl;
 
 	// load texture
 	Texture2D texture;
 	texture.loadTexture("./resources/textures/marbl01.jpg", true);
-		
+
 	// compute view matrix using glm::lookat
 	glm::mat4  view = glm::lookAt(glm::vec3(10.0f, 10.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	app.setView(view);
@@ -91,11 +94,19 @@ int main(int argc, char *argv[])
 		// animate
 		mesh.rotate(.0001f, glm::vec3(.0f, 1.0f, .0f));
 
+		static bool cHeld = false;
+		if (!cHeld && glfwGetKey(app.getWindow(), GLFW_KEY_C) == GLFW_PRESS) {
+			graph.ColourResults();
+			cHeld = true;
+		}
+		if (cHeld && glfwGetKey(app.getWindow(), GLFW_KEY_C) == GLFW_RELEASE) {
+			cHeld = false;
+		}
 
 		/*
 		**	RENDER
 		*/
-		
+
 		// clear buffer
 		app.clear();
 

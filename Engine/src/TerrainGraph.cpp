@@ -8,9 +8,10 @@ using namespace std;
 // HELP FUNCTIONS ---------------------------------------------------------------------------
 
 bool SimilarGradients(float grad1, float grad2) {
-	if ((grad1 > 1 && grad2 > 1)
-		|| (grad1 < -1 && grad2 < -1)
-		|| (fabsf(grad1) <= 1 && fabsf(grad2) <= 1)) {
+	float simVal = 0.3f;
+	if ((grad1 > simVal && grad2 > simVal)
+		|| (grad1 < -simVal && grad2 < -simVal)
+		|| (fabsf(grad1) <= simVal && fabsf(grad2) <= simVal)) {
 		// Set similar to true
 		return true;
 	}
@@ -91,16 +92,17 @@ void TerrainVertex::CalculateShape() {
 		}
 	}
 
+	float simVal = 0.3f;
 	switch (simplify.size())
 	{
 		// If only one item exists in simplify
 	case(1):
 		// Edges slope up from vertex
-		if (simplify[0].second > 1.0f) {
+		if (simplify[0].second > simVal) {
 			m_shape = PIT;
 		}
 		// Edges slope down to vertex
-		else if (simplify[0].second < -1.0f) {
+		else if (simplify[0].second < -simVal) {
 			m_shape = PEAK;
 		}
 		// Edges do not experience large change around vertex
@@ -116,7 +118,7 @@ void TerrainVertex::CalculateShape() {
 		// For both groups
 		for (int i = 0; i < 2; ++i) {
 			// If this pair is a flat group
-			if (fabsf(simplify[i].second) <= 1.0f) {
+			if (fabsf(simplify[i].second) <= simVal) {
 				// Store other gradient in nonFlat
 				nonFlat = simplify[(i + 1) % 2].second;
 				// Exit for loop
@@ -124,11 +126,11 @@ void TerrainVertex::CalculateShape() {
 			}
 		}
 		// If steep group slopes up
-		if (nonFlat > 1.0f) {
+		if (nonFlat > simVal) {
 			m_shape = HILLBASE;
 		}
 		// If steep group sloped down
-		else if (nonFlat < -1.0f) {
+		else if (nonFlat < -simVal) {
 			m_shape = HILLTOP;
 		}
 		// If no flat group exists
@@ -149,10 +151,10 @@ void TerrainVertex::CalculateShape() {
 		int countEq = 0;
 		// Go through groups and increment count groups
 		for (pair<int, float> p : simplify) {
-			if (p.second > 1.0f) {
+			if (p.second > simVal) {
 				countPos++;
 			}
-			else if (p.second < -1.0f) {
+			else if (p.second < -simVal) {
 				countNeg--;
 			}
 			else {
@@ -353,7 +355,7 @@ void TerrainGraph::CreateGraph() {
 		// Set position from indexed model positions
 		tv->SetPos(obj.vertices[v]);
 		// Set normal from indexed model normals
-		tv->SetNormal(obj.normals[v]);
+		//tv->SetNormal(obj.normals[v]);
 		// Add terrainVertex to graph list of vertices
 		m_verts.push_back(tv);
 	}
@@ -385,8 +387,15 @@ void TerrainGraph::AnalyseGraph() {
 }
 
 void TerrainGraph::ColourResults() {
+	m_uniqueColours.clear();
+	m_nonUniqueColours.clear();
+	static int lim = 0;
 	for (TerrainVertex* v : m_verts) {
-		switch (v->GetShape()) {
+		TerrainShape test = v->GetShape();
+		if (test > lim) {
+			test = FLAT;
+		}
+		switch (test) {
 		case(PEAK):
 			m_uniqueColours.push_back(glm::vec4(0.7, 0.1, 0.1, 1.0)); // Red
 			break;
@@ -424,4 +433,5 @@ void TerrainGraph::ColourResults() {
 		m_nonUniqueColours.push_back(m_uniqueColours[indices[c].vertexIndex]);
 	}
 	m_pm->addColourBuffer(m_nonUniqueColours);
+	lim++;
 }
