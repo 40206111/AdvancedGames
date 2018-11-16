@@ -1,6 +1,8 @@
 #pragma once
 #include <glm/glm.hpp>
 #include <vector>
+#include "OBJLoader.h"
+#include "PolyMesh.h"
 
 enum TerrainShape { PEAK, PIT, RIDGE_V, TROUGH_V, HILLTOP, HILLBASE, SLOPE, FLAT, SADDLE };
 enum EdgeType { DEFAULT, RIDGE_E, TROUGH_E, WATERSHED };
@@ -67,3 +69,21 @@ private:
 	glm::vec3 m_normDirFlat;
 };
 
+class TerrainGraph {
+public:
+	TerrainGraph();
+	~TerrainGraph();
+
+	void SetPolyMesh(PolyMesh* pm) { m_pm = pm; }
+
+	void CreateGraph();
+	void AnalyseGraph();
+	void ColourResults();
+
+private:
+	PolyMesh* m_pm;
+	std::vector<TerrainVertex*> m_verts;
+	std::vector<TerrainEdge*> m_edges;
+	std::vector<glm::vec4> m_uniqueColours;
+	std::vector<glm::vec4> m_nonUniqueColours;
+};

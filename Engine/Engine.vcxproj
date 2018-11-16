@@ -27,8 +27,8 @@
     <ClCompile Include="src\Rasterizer\Rasterizer.cpp" />
     <ClCompile Include="src\Raytracer\Raytracer.cpp" />
     <ClCompile Include="src\ShaderProgram.cpp" />
+    <ClCompile Include="src\TerrainGraph.cpp" />
     <ClCompile Include="src\Texture2D.cpp" />
-    <ClCompile Include="TerrainGraph.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Application.h" />
@@ -41,11 +41,11 @@
     <ClInclude Include="src\Rasterizer\Rasterizer.h" />
     <ClInclude Include="src\Raytracer\Raytracer.h" />
     <ClInclude Include="src\Scene.h" />
+    <ClInclude Include="src\TerrainGraph.h" />
     <ClInclude Include="src\Transform.h" />
     <ClInclude Include="src\PolyMesh.h" />
     <ClInclude Include="src\ShaderProgram.h" />
     <ClInclude Include="src\Texture2D.h" />
-    <ClInclude Include="TerrainGraph.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

@@ -36,6 +36,7 @@ public:
 	bool hasNormals;
 
 	OBJModel(const std::string& fileName);
+	OBJModel(){}
 
 	IndexedModel ToIndexedModel();
 private:

@@ -42,7 +42,7 @@
     <ClCompile Include="src\OBJLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="TerrainGraph.cpp">
+    <ClCompile Include="src\TerrainGraph.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -89,7 +89,7 @@
     <ClInclude Include="src\OBJLoader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="TerrainGraph.h">
+    <ClInclude Include="src\TerrainGraph.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

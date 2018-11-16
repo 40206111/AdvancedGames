@@ -55,6 +55,7 @@ public:
 
 	void initMesh(const IndexedModel& model);
 
+	void addColourBuffer(const std::vector<glm::vec4>& colours);
 
 	// accessors
 	GLuint getVBO() const { return m_vbo; }
@@ -62,6 +63,8 @@ public:
 	GLuint getShaderProgram() const { return m_shaderProgram; }
 	GLuint getVertexNum() const { return m_vertexNum; }
 	CreationMode getCreationMode() const { return m_creationMode; }
+
+	const OBJModel& getOBJModel() { return m_obj; }
 
 	// utility
 	// create vector of unique vertices
@@ -80,6 +83,8 @@ private:
 	GLuint m_vertexNumUnique; // number of unique vertices i.e., without duplicates.
 	std::vector<glm::vec3> m_vertices; // unique vertices (no duplicates)
 
+	OBJModel m_obj;
+
 	// openGL specific variables
 	GLuint m_vao; // vertex array object
 	GLuint m_vbo; // vertex buffer object
@@ -87,6 +92,8 @@ private:
 	GLuint m_nbo; // normal buffer object
 	GLuint m_tao; // texture coordinates array object
 	GLuint m_tbo; // texture coordinates buffer object
+
+	GLuint m_cbo; // colour buffer object
 
 	GLuint m_shaderProgram; // shader program used to draw Mesh
 

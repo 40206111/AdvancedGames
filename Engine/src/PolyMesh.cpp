@@ -11,11 +11,13 @@ PolyMesh::PolyMesh() {}
 // create mesh from a .obj file
 PolyMesh::PolyMesh(const string& fileName)
 {
-	initMesh(OBJModel(fileName).ToIndexedModel());
+	m_obj = OBJModel(fileName);
+	initMesh(m_obj.ToIndexedModel());
 }
 
 void PolyMesh::initMesh(const IndexedModel& model) {
 	m_vertexNum = model.indices.size();
+	//m_creationMode = INDEXED;
 
 	glGenVertexArrays(1, &m_vao);
 	glBindVertexArray(m_vao);
@@ -42,6 +44,18 @@ void PolyMesh::initMesh(const IndexedModel& model) {
 
 	glBindVertexArray(0);
 
+}
+
+void PolyMesh::addColourBuffer(const vector<glm::vec4>& colours) {
+	glBindVertexArray(m_vao);
+
+	glGenBuffers(1, &m_cbo);
+	glBindBuffer(GL_ARRAY_BUFFER, m_cbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(colours[0]) * colours.size(), &colours[0], GL_STATIC_DRAW);
+	glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(3);
+
+	glBindVertexArray(0);
 }
 
 PolyMesh::PolyMesh(PrimitiveType type)

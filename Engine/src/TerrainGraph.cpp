@@ -338,3 +338,90 @@ void TerrainEdge::CalculateGradient() {
 	// Assign abolute value of gradient
 	m_gradient = fabsf(CalculateGradientHelp(diff));
 }
+
+// TERRAIN GRAPH ------------------------------------------------------------------
+
+TerrainGraph::TerrainGraph() {}
+TerrainGraph::~TerrainGraph() {}
+
+void TerrainGraph::CreateGraph() {
+	const OBJModel& obj = m_pm->getOBJModel();
+	// For each vertex of the indexed model create a vertex
+	for (int v = 0; v < obj.vertices.size(); ++v) {
+		// New terrain vertex
+		TerrainVertex* tv = new TerrainVertex();
+		// Set position from indexed model positions
+		tv->SetPos(obj.vertices[v]);
+		// Set normal from indexed model normals
+		tv->SetNormal(obj.normals[v]);
+		// Add terrainVertex to graph list of vertices
+		m_verts.push_back(tv);
+	}
+	// For each vertex index in the indexed model 
+	// Increment by three to step in triangles
+	for (int e = 0; e < obj.OBJIndices.size(); e += 3) {
+		// For each of the three indexes in a triangle
+		for (int i = 0; i < 3; ++i) {
+			// New terrainEdge
+			TerrainEdge* te = new TerrainEdge();
+			// pair of indices (either: 0/1, 1/2, 2/0)
+			int index1 = obj.OBJIndices[e + i].vertexIndex;
+			int index2 = obj.OBJIndices[(e + ((i + 1) % 3))].vertexIndex;
+			// Set edge points to vertices at indices
+			te->SetPoints(m_verts[index1], m_verts[index2]);
+			// Add endge to list
+			m_edges.push_back(te);
+			// Add edge to vertices
+			m_verts[index1]->AddEdge(te);
+			m_verts[index2]->AddEdge(te);
+		}
+	}
+}
+
+void TerrainGraph::AnalyseGraph() {
+	for (TerrainVertex* v : m_verts) {
+		v->CalculateShape();
+	}
+}
+
+void TerrainGraph::ColourResults() {
+	for (TerrainVertex* v : m_verts) {
+		switch (v->GetShape()) {
+		case(PEAK):
+			m_uniqueColours.push_back(glm::vec4(0.7, 0.1, 0.1, 1.0)); // Red
+			break;
+		case(PIT):
+			m_uniqueColours.push_back(glm::vec4(0.1, 0.1, 0.7, 1.0)); // Blue
+			break;
+		case(RIDGE_V):
+			m_uniqueColours.push_back(glm::vec4(0.7, 0.4, 0.1, 1.0)); // Greener red than peak (orange basically)
+			break;
+		case(TROUGH_V):
+			m_uniqueColours.push_back(glm::vec4(0.1, 0.4, 0.7, 1.0)); // Greener blue than pit
+			break;
+		case(HILLTOP):
+			m_uniqueColours.push_back(glm::vec4(0.7, 0.1, 0.4, 1.0)); // Red purple
+			break;
+		case(HILLBASE):
+			m_uniqueColours.push_back(glm::vec4(0.4, 0.1, 0.7, 1.0)); // Blue purple
+			break;
+		case(SLOPE):
+			m_uniqueColours.push_back(glm::vec4(0.5, 0.1, 0.5, 1.0)); // Balanced purple
+			break;
+		case(FLAT):
+			m_uniqueColours.push_back(glm::vec4(0.6, 0.6, 0.6, 1.0)); // Light grey
+			break;
+		case(SADDLE):
+			m_uniqueColours.push_back(glm::vec4(0.1, 0.7, 0.1, 1.0)); // Green
+			break;
+		default:
+			m_uniqueColours.push_back(glm::vec4(1.0, 1.0, 1.0, 1.0)); // White
+			break;
+		}
+	}
+	vector<OBJIndex> indices = m_pm->getOBJModel().OBJIndices;
+	for (int c = 0; c < indices.size(); ++c) {
+		m_nonUniqueColours.push_back(m_uniqueColours[indices[c].vertexIndex]);
+	}
+	m_pm->addColourBuffer(m_nonUniqueColours);
+}

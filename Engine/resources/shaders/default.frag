@@ -3,6 +3,7 @@
 layout (location = 0) in vec3 position;
 
 in vec3 normal;
+in vec4 colour;
 out vec4 color;
 
 // light
@@ -39,6 +40,11 @@ vec4 computeColour(){
 // return fragment colour
 void main()
 {
-    color = computeColour();
+	vec4 lightVal = computeColour();
+	color.x = colour.x * lightVal.x;
+	color.y = colour.y * lightVal.y;
+	color.z = colour.z * lightVal.z;
+	color.a = 1.0;
+	// color = colour;
 }
 
