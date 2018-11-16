@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
 	/*
 		CREATE APP CONTAINER
 	*/
-	GLFWApplication app = GLFWApplication::GLFWApplication("GLFW engine test", 800, 600);
+	GLFWApplication app = GLFWApplication::GLFWApplication("GLFW engine test", 1000, 1000);
 	app.init();
 
 	/*
@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
 	texture.loadTexture("./resources/textures/marbl01.jpg", true);
 
 	// compute view matrix using glm::lookat
-	glm::mat4  view = glm::lookAt(glm::vec3(10.0f, 10.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	glm::mat4  view = glm::lookAt(glm::vec3(7.0f, 9.0f, 7.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	app.setView(view);
 
 	// projection matrix
@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
 		app.pollEvents();
 
 		// animate
-		mesh.rotate(.0001f, glm::vec3(.0f, 1.0f, .0f));
+		//mesh.rotate(.0001f, glm::vec3(.0f, 1.0f, .0f));
 
 		static bool cHeld = false;
 		if (!cHeld && glfwGetKey(app.getWindow(), GLFW_KEY_C) == GLFW_PRESS) {

@@ -392,7 +392,7 @@ void TerrainGraph::ColourResults() {
 	static int lim = 0;
 	for (TerrainVertex* v : m_verts) {
 		TerrainShape test = v->GetShape();
-		if (test > lim) {
+		if (test > lim || test < lim) {
 			test = FLAT;
 		}
 		switch (test) {
@@ -434,4 +434,5 @@ void TerrainGraph::ColourResults() {
 	}
 	m_pm->addColourBuffer(m_nonUniqueColours);
 	lim++;
+	lim = lim % 14;
 }
