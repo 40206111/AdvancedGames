@@ -86,4 +86,8 @@ private:
 	std::vector<TerrainEdge*> m_edges;
 	std::vector<glm::vec4> m_uniqueColours;
 	std::vector<glm::vec4> m_nonUniqueColours;
+
+	TerrainEdge* FindExistingEdge(int first, int second);
+	std::vector<std::pair<int, int>> m_prevEdgePairs;
+	std::vector<TerrainEdge*> m_prevEdges;
 };

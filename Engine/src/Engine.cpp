@@ -42,6 +42,10 @@ int main(int argc, char *argv[])
 	//detail cliff tris.obj
 	//coral_hard_02.obj
 	//stabbs-8k.obj
+	// bumps.obj
+	// maybe saddle.obj
+	// peak.obj
+	// valley.obj
 	PolyMesh mesh = PolyMesh::PolyMesh("./resources/models/stabbs-8k.obj");
 	// material
 	Phong phong = Phong::Phong(glm::vec3(.2f, .2f, .2f), glm::vec3(.5f, .2f, .2f), glm::vec3(.2f, .2f, .2f), 12);
@@ -50,7 +54,8 @@ int main(int argc, char *argv[])
 
 
 	// transformations
-	mesh.scale(glm::vec3(.5f, .5f, .5f));
+	//mesh.scale(glm::vec3(1.5f, 1.5f, 1.5f));
+	mesh.scale(glm::vec3(0.5f, 0.5f, 0.5f));
 
 	TerrainGraph graph;
 	graph.SetPolyMesh(&mesh);
@@ -59,7 +64,7 @@ int main(int argc, char *argv[])
 	cout << "Pre-analysis" << endl;
 	graph.AnalyseGraph();
 	cout << "Pre-colouring" << endl;
-	//graph.ColourResults();
+	graph.ColourResults();
 	cout << "Graph done" << endl;
 
 	// load texture

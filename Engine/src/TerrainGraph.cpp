@@ -155,7 +155,7 @@ void TerrainVertex::CalculateShape() {
 				countPos++;
 			}
 			else if (p.second < -simVal) {
-				countNeg--;
+				countNeg++;
 			}
 			else {
 				countEq++;
@@ -346,6 +346,27 @@ void TerrainEdge::CalculateGradient() {
 TerrainGraph::TerrainGraph() {}
 TerrainGraph::~TerrainGraph() {}
 
+TerrainEdge* TerrainGraph::FindExistingEdge(int first, int second) {
+	// Search through un-paired edges
+	for (int e = 0; e < m_prevEdgePairs.size(); ++e) {
+		// If pair matches in current order
+		if ((m_prevEdgePairs[e].first == first && m_prevEdgePairs[e].second == second)
+			// Or if pair matches in reverse order
+			|| (m_prevEdgePairs[e].first == second && m_prevEdgePairs[e].second == first)) {
+			// Remove pair from pair list
+			m_prevEdgePairs.erase(m_prevEdgePairs.begin() + e);
+			// Copy pointer to terrainEdge
+			TerrainEdge* te = m_prevEdges[e];
+			// Remove edge from list
+			m_prevEdges.erase(m_prevEdges.begin() + e);
+			// Return edge
+			return te;
+		}
+	}
+	// If nothing found return nullptr
+	return nullptr;
+}
+
 void TerrainGraph::CreateGraph() {
 	const OBJModel& obj = m_pm->getOBJModel();
 	// For each vertex of the indexed model create a vertex
@@ -359,20 +380,36 @@ void TerrainGraph::CreateGraph() {
 		// Add terrainVertex to graph list of vertices
 		m_verts.push_back(tv);
 	}
+	// For each vertex, add its normal
+	for (int n = 0; n < obj.OBJIndices.size(); ++n) {
+		// Local copy of index object for clearer array indexing
+		OBJIndex indexSet = obj.OBJIndices[n];
+		// Set normal for a given vertex using OBJIndex details
+		m_verts[indexSet.vertexIndex]->SetNormal(obj.normals[indexSet.normalIndex]);
+	}
 	// For each vertex index in the indexed model 
 	// Increment by three to step in triangles
 	for (int e = 0; e < obj.OBJIndices.size(); e += 3) {
 		// For each of the three indexes in a triangle
 		for (int i = 0; i < 3; ++i) {
-			// New terrainEdge
-			TerrainEdge* te = new TerrainEdge();
 			// pair of indices (either: 0/1, 1/2, 2/0)
 			int index1 = obj.OBJIndices[e + i].vertexIndex;
 			int index2 = obj.OBJIndices[(e + ((i + 1) % 3))].vertexIndex;
-			// Set edge points to vertices at indices
-			te->SetPoints(m_verts[index1], m_verts[index2]);
-			// Add endge to list
-			m_edges.push_back(te);
+			// New terrainEdge
+			TerrainEdge* te = FindExistingEdge(index1, index2);
+			// If no details for edge exist
+			if (te == nullptr) {
+				// Initialise terrain edge
+				te = new TerrainEdge();
+				// Set edge points to vertices at indices
+				te->SetPoints(m_verts[index1], m_verts[index2]);
+				// Add edge to list
+				m_edges.push_back(te);
+				// Add pair of vertex indices to list
+				m_prevEdgePairs.push_back(pair<int, int>(index1, index2));
+				// Add pointer to list
+				m_prevEdges.push_back(te);
+			}
 			// Add edge to vertices
 			m_verts[index1]->AddEdge(te);
 			m_verts[index2]->AddEdge(te);
@@ -392,7 +429,7 @@ void TerrainGraph::ColourResults() {
 	static int lim = 0;
 	for (TerrainVertex* v : m_verts) {
 		TerrainShape test = v->GetShape();
-		if (test > lim || test < lim) {
+		if (test > lim/* || test < lim*/) {
 			test = FLAT;
 		}
 		switch (test) {
@@ -434,5 +471,5 @@ void TerrainGraph::ColourResults() {
 	}
 	m_pm->addColourBuffer(m_nonUniqueColours);
 	lim++;
-	lim = lim % 14;
+	lim = lim % 9;
 }
