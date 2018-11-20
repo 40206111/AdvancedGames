@@ -41,8 +41,8 @@ int main(int argc, char *argv[])
 	//PolyMesh mesh = PolyMesh::PolyMesh(vertices, 6, 3); // create model from list of vertices and associated UVs
 	//detail cliff tris.obj
 	//coral_hard_02.obj
-	//mesh1-8k-tris.OBJ
-	PolyMesh mesh = PolyMesh::PolyMesh("./resources/models/detail cliff tris.obj");
+	//stabbs-8k.obj
+	PolyMesh mesh = PolyMesh::PolyMesh("./resources/models/stabbs-8k.obj");
 	// material
 	Phong phong = Phong::Phong(glm::vec3(.2f, .2f, .2f), glm::vec3(.5f, .2f, .2f), glm::vec3(.2f, .2f, .2f), 12);
 	// Model
