@@ -44,6 +44,7 @@ void TerrainVertex::CalculateShape() {
 	if (!m_ordered) {
 		OrderEdges();
 	}
+	CalculateGradient();
 	// Gradients of edges
 	vector<float> grads;
 	for (int i = 0; i < m_edges.size(); ++i) {
@@ -283,6 +284,9 @@ void TerrainVertex::OrderEdges() {
 
 void TerrainVertex::CalculateGradient() {
 	// Assign value of gradient (not absolute)
+	if (m_normal != glm::vec3(0.0f)) {
+		m_normal = glm::normalize(m_normal);
+	}
 	m_gradient = CalculateGradientHelp(m_normal);
 }
 
@@ -304,13 +308,62 @@ void TerrainVertex::MakeFlowGroup(vector<TerrainVertex*> &visited, int id) {
 	else {
 		m_waterShedID = -2;
 	}
-	for (TerrainVertex* te : m_flowFrom) {
+	/*for (TerrainVertex* te : m_flowFrom) {
 		te->MakeFlowGroup(visited, id);
+	}*/
+	if (m_flowFrom.size() / m_edges.size() > 0.2f) {
+		m_shape = TROUGH_V;
+	}
+	else {
+		m_shape = FLAT;
+	}
+}
+
+void TerrainVertex::FollowSteepUp(vector<TerrainVertex*> &visited, int id) {
+	if (m_steepestUp.size() == 0 && this->m_waterShedID != -1) {
+		return;
+	}
+	if (id == m_waterShedID) {
+		return;
+	}
+	visited.push_back(this);
+	// If not part of any group
+	if (m_waterShedID == -1) {
+		m_waterShedID = id;
+	}
+	else {
+		m_waterShedID = -2;
+	}
+	float steepest = 0.0f;
+	for (TerrainEdge* te : m_edges) {
+		float grad = te->GetGradient(this);
+		if (grad > steepest) {
+			steepest = grad;
+		}
+	}
+	
+	for (TerrainEdge* te : m_edges) {
+		if (te->GetGradient(this) >= steepest - 0.00001) {
+			TerrainVertex* goTo = te->GetOtherPoint(this);
+			if (find(visited.begin(), visited.end(), goTo) == visited.end()) {
+				goTo->FollowSteepUp(visited, id);
+			}
+		}
 	}
 }
 
 void TerrainVertex::AddFlowSource(TerrainVertex* source) {
 	m_flowFrom.push_back(source);
+}
+
+bool TerrainVertex::AddEdge(TerrainEdge* edge) {
+	if (find(m_edges.begin(), m_edges.end(), edge) == m_edges.end()) {
+		m_edges.push_back(edge);
+		return true;
+	}
+	else {
+		return false;
+	}
 }
 
 // TERRAIN EDGE ----------------------------------
@@ -481,7 +534,7 @@ void TerrainGraph::CreateGraph() {
 		// Local copy of index object for clearer array indexing
 		OBJIndex indexSet = obj.OBJIndices[n];
 		// Set normal for a given vertex using OBJIndex details
-		m_verts[indexSet.vertexIndex]->SetNormal(obj.normals[indexSet.normalIndex]);
+		m_verts[indexSet.vertexIndex]->AddNormal(obj.normals[indexSet.normalIndex]);
 	}
 	// For each vertex index in the indexed model 
 	// Increment by three to step in triangles
@@ -506,9 +559,12 @@ void TerrainGraph::CreateGraph() {
 				// Add pointer to list
 				m_prevEdges.push_back(te);
 			}
-			// Add edge to vertices
-			m_verts[index1]->AddEdge(te);
-			m_verts[index2]->AddEdge(te);
+			// Add edge to vertices (if it hasn't been added before)
+			if (m_verts[index1]->AddEdge(te)) {
+				m_verts[index2]->AddEdge(te);
+			}
+			/*	m_verts[index1]->AddEdge(te);
+				m_verts[index2]->AddEdge(te);*/
 		}
 	}
 }
@@ -526,7 +582,7 @@ void TerrainGraph::AnalyseGraph() {
 	int i = 0;
 	for (TerrainVertex* v : m_flowless) {
 		vector<TerrainVertex*> visited;
-		v->MakeFlowGroup(visited, i++);
+		v->FollowSteepUp(visited, i++);
 	}
 }
 
@@ -627,4 +683,19 @@ void TerrainGraph::ColourShapeResults() {
 	m_pm->addColourBuffer(m_nonUniqueColours);
 	lim++;
 	lim = lim % 9;
+}
+
+void TerrainGraph::ColourGradients() {
+	m_uniqueColours.clear();
+	m_nonUniqueColours.clear();
+
+	for (TerrainVertex* v : m_verts) {
+		m_uniqueColours.push_back(glm::vec4(glm::vec3(v->GetGradient()),1.0f));
+	}
+
+	vector<OBJIndex> indices = m_pm->getOBJModel().OBJIndices;
+	for (int c = 0; c < indices.size(); ++c) {
+		m_nonUniqueColours.push_back(m_uniqueColours[indices[c].vertexIndex]);
+	}
+	m_pm->addColourBuffer(m_nonUniqueColours);
 }

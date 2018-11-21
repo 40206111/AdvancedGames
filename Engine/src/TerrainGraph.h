@@ -22,13 +22,18 @@ public:
 	int GetFlowGroup() { return m_waterShedID; }
 
 	void SetPos(glm::vec3 p) { m_pos = p; }
-	void SetNormal(glm::vec3 n) { m_normal = n; CalculateGradient(); }
-	void AddEdge(TerrainEdge* e) { m_edges.push_back(e); }
+	void AddNormal(glm::vec3 n) { m_normal += n; }
+	// Add an edge to the vertex
+	// Returns false if edge was already added
+	bool AddEdge(TerrainEdge* e);
 
 	// Find the shape of the vertex
 	void CalculateShape();
+	// Find the vertices this vertex flows to
+	// Returns false if this vertex does not flow
 	bool CalculateFlow();
 	void MakeFlowGroup(std::vector<TerrainVertex*> &visited, int id);
+	void FollowSteepUp(std::vector<TerrainVertex*> &visited, int id);
 
 	void AddFlowSource(TerrainVertex* source);
 
@@ -41,7 +46,7 @@ private:
 	bool m_ordered = false;
 
 	glm::vec3 m_pos;
-	glm::vec3 m_normal;
+	glm::vec3 m_normal = glm::vec3(0.0f);
 	float m_gradient;
 	std::vector<TerrainEdge*> m_edges;
 	TerrainShape m_shape;
@@ -94,6 +99,7 @@ public:
 	void AnalyseGraph();
 	void ColourWaterGroup();
 	void ColourShapeResults();
+	void ColourGradients();
 
 private:
 	PolyMesh* m_pm;
