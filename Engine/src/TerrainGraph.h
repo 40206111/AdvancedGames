@@ -23,7 +23,7 @@ public:
 	void SetPos(glm::vec3 p) { m_pos = p; }
 	void SetNormal(glm::vec3 n) { m_normal = n; CalculateGradient(); }
 	void AddEdge(TerrainEdge* e) { m_edges.push_back(e); }
-	
+
 	// Find the shape of the vertex
 	void CalculateShape();
 
@@ -40,6 +40,10 @@ private:
 	float m_gradient;
 	std::vector<TerrainEdge*> m_edges;
 	TerrainShape m_shape;
+	std::vector<std::vector<TerrainEdge*>> m_groups;
+	std::vector<TerrainEdge*> m_steepestUp;
+	std::vector<TerrainEdge*> m_steepestDown;
+	float simVal = 0.1f;
 };
 
 class TerrainEdge {

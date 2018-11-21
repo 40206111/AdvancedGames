@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
 	// maybe saddle.obj
 	// peak.obj
 	// valley.obj
-	PolyMesh mesh = PolyMesh::PolyMesh("./resources/models/stabbs-8k.obj");
+	PolyMesh mesh = PolyMesh::PolyMesh("./resources/models/detail cliff tris.obj");
 	// material
 	Phong phong = Phong::Phong(glm::vec3(.2f, .2f, .2f), glm::vec3(.5f, .2f, .2f), glm::vec3(.2f, .2f, .2f), 12);
 	// Model

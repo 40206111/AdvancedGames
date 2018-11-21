@@ -7,8 +7,7 @@ using namespace std;
 
 // HELP FUNCTIONS ---------------------------------------------------------------------------
 
-bool SimilarGradients(float grad1, float grad2) {
-	float simVal = 0.3f;
+bool SimilarGradients(float simVal, float grad1, float grad2) {
 	if ((grad1 > simVal && grad2 > simVal)
 		|| (grad1 < -simVal && grad2 < -simVal)
 		|| (fabsf(grad1) <= simVal && fabsf(grad2) <= simVal)) {
@@ -21,18 +20,17 @@ bool SimilarGradients(float grad1, float grad2) {
 }
 
 float CalculateGradientHelp(glm::vec3 diff) {
-	// Difference in height
-	float v = diff.y;
-	// Squared difference in horizontal change
-	float h2 = diff.x * diff.x + diff.z * diff.z;
-	// Difference in horizontal change (initialised to very small value to avoid dividing by 0)
-	float h = 0.0001f;
-	// If horizontal difference is not 0 assign actual difference
-	if (h2 > 0.0f) {
-		h = sqrtf(h2);
+	// If diff is a zero vector
+	if (diff == glm::vec3(0.0f)) {
+		return 0;
 	}
-	// Calculate absolute value of gradient
-	return (v / h);
+	// Calculate dot product
+	float diffDot = glm::dot(glm::normalize(diff), glm::vec3(0.0f, 1.0f, 0.0f));
+	// Get angle from dot product
+	float diffAng = acosf(diffDot);
+	// Make range from 1(up) to -1 (down)
+	diffAng = 1 - (2 * diffAng / M_PI);
+	return diffAng;
 }
 
 // TERRAIN VERTEX -------------------------------------------------------------------------
@@ -50,59 +48,77 @@ void TerrainVertex::CalculateShape() {
 	for (int i = 0; i < m_edges.size(); ++i) {
 		grads.push_back(m_edges[i]->GetGradient(this));
 	}
-	vector<pair<int, float>> simplify;
+	// If there are gradients
 	if (grads.size() > 0) {
-		simplify.push_back(pair<int, float>(1, grads[0]));
+		// Add first group of edges
+		m_groups.push_back(vector<TerrainEdge*>());
+		// Add edge to first group of edges
+		m_groups.back().push_back(m_edges[0]);
+		// For each edge/gradient
 		for (int i = 1; i < grads.size(); ++i) {
 			// If gradients are similar
-			if (SimilarGradients(grads[i], simplify.back().second)) {
-				// Get total from count * average
-				float total = simplify.back().first * simplify.back().second;
-				// Add new value to total
-				total += grads[i];
-				// Make pair with new count, and (new total/new count)
-				pair<int, float> newPair = pair<int, float>(simplify.back().first + 1,
-					total / ((float)simplify.back().first + 1));
-				// Change last pair in simplify
-				simplify.back() = newPair;
+			if (SimilarGradients(simVal, grads[i], grads[i - 1])) {
+				// Add to current group of edges
+				m_groups.back().push_back(m_edges[i]);
 			}
 			else {
-				// Make a new simplify entry
-				simplify.push_back(pair<int, float>(1, grads[i]));
+				// Add new group of edges
+				m_groups.push_back(vector<TerrainEdge*>());
+				// Add to new group of edges
+				m_groups.back().push_back(m_edges[i]);
 			}
 		}
 	}
 	// If more than 2 groups exist
-	if (simplify.size() >= 3) {
+	if (m_groups.size() >= 3) {
 		// Check if first and last group could wrap into each other
-		if (SimilarGradients(simplify.front().second, simplify.back().second)) {
-			// Local copies of pairs
-			pair<int, float> p1 = simplify.front();
-			pair<int, float> p2 = simplify.back();
-			// New count for pair
-			int newCount = p1.first + p2.first;
-			// New total for pairs
-			float newTotal = p1.second * (float)p1.first + p2.second * (float)p2.first;
-			// New pair
-			pair<int, float> newP = pair<int, float>(newCount, newTotal / ((float)newCount));
-			// Replace first pair with joined pair
-			simplify.front() = newP;
-			// Remove last pair from list
-			simplify.pop_back();
+		if (SimilarGradients(simVal, m_groups.front().front()->GetGradient(this),
+			m_groups.back().front()->GetGradient(this))) {
+			// Add last list to first list
+			for (TerrainEdge* te : m_groups.back()) {
+				m_groups.front().push_back(te);
+			}
+			// Remove extra group
+			m_groups.erase(m_groups.begin() + m_groups.size() - 1);
 		}
 	}
-
-	float simVal = 0.3f;
-	switch (simplify.size())
+	// Find steepest gradients up/down
+	// For each group of gradients
+	for (vector<TerrainEdge*> &vte : m_groups) {
+		// Variables to store information after loop
+		float greatest = 0.0f;
+		TerrainEdge* greatEdge;
+		// For each edge in the group
+		for (TerrainEdge* te : vte) {
+			// If this edge is steeper than others
+			if (fabsf(te->GetGradient(this)) > fabsf(greatest)) {
+				// Save the new steepest gradient
+				greatest = te->GetGradient(this);
+				// Save the edge associated
+				greatEdge = te;
+			}
+		}
+		// If gradient is negative
+		if (greatest < 0.0f) {
+			// Add to steepest descending gradients
+			m_steepestDown.push_back(greatEdge);
+		}
+		else {
+			// Add to steepest ascending gradients
+			m_steepestUp.push_back(greatEdge);
+		}
+	}
+	// Find shape of terrain
+	switch (m_groups.size())
 	{
 		// If only one item exists in simplify
 	case(1):
 		// Edges slope up from vertex
-		if (simplify[0].second > simVal) {
+		if (m_groups[0].front()->GetGradient(this) > simVal) {
 			m_shape = PIT;
 		}
 		// Edges slope down to vertex
-		else if (simplify[0].second < -simVal) {
+		else if (m_groups[0].front()->GetGradient(this) < -simVal) {
 			m_shape = PEAK;
 		}
 		// Edges do not experience large change around vertex
@@ -118,9 +134,9 @@ void TerrainVertex::CalculateShape() {
 		// For both groups
 		for (int i = 0; i < 2; ++i) {
 			// If this pair is a flat group
-			if (fabsf(simplify[i].second) <= simVal) {
+			if (fabsf(m_groups[i].front()->GetGradient(this)) <= simVal) {
 				// Store other gradient in nonFlat
-				nonFlat = simplify[(i + 1) % 2].second;
+				nonFlat = m_groups[(i + 1) % 2].front()->GetGradient(this);
 				// Exit for loop
 				break;
 			}
@@ -149,18 +165,20 @@ void TerrainVertex::CalculateShape() {
 		int countPos = 0;
 		int countNeg = 0;
 		int countEq = 0;
-		// Go through groups and increment count groups
-		for (pair<int, float> p : simplify) {
-			if (p.second > simVal) {
+		// Go through groups and increment count variables
+		for (vector<TerrainEdge*> vte : m_groups) {
+			float grad = vte.front()->GetGradient(this);
+			if (grad > simVal) {
 				countPos++;
 			}
-			else if (p.second < -simVal) {
+			else if (grad < -simVal) {
 				countNeg++;
 			}
 			else {
 				countEq++;
 			}
 		}
+
 		// If opposing + groups
 		if (countPos == 2.0f) {
 			// If opposing - groups
@@ -189,6 +207,7 @@ void TerrainVertex::CalculateShape() {
 	}
 }
 
+
 void TerrainVertex::OrderEdges() {
 	vector<float> angles;
 	vector<int> indices;
@@ -209,10 +228,6 @@ void TerrainVertex::OrderEdges() {
 		for (int i = maxI; i > 0; --i) {
 			// If later value is smaller than earlier value, swap values
 			if (angles[indices[i]] < angles[indices[i - 1]]) {
-				// Swap angle values
-				/*float tempf = angles[i];
-				angles[i] = angles[i - 1];
-				angles[i - 1] = tempf;*/
 				// Swap index values
 				int tempi = indices[i];
 				indices[i] = indices[i - 1];
@@ -429,7 +444,7 @@ void TerrainGraph::ColourResults() {
 	static int lim = 0;
 	for (TerrainVertex* v : m_verts) {
 		TerrainShape test = v->GetShape();
-		if (test > lim/* || test < lim*/) {
+		if (test > lim || test < lim) {
 			test = FLAT;
 		}
 		switch (test) {
