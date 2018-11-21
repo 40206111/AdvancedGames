@@ -55,7 +55,8 @@ int main(int argc, char *argv[])
 
 	// transformations
 	//mesh.scale(glm::vec3(1.5f, 1.5f, 1.5f));
-	mesh.scale(glm::vec3(0.5f, 0.5f, 0.5f));
+	mesh.scale(glm::vec3(0.4));
+	//mesh.scale(glm::vec3(0.1f));
 
 	TerrainGraph graph;
 	graph.SetPolyMesh(&mesh);
@@ -64,7 +65,7 @@ int main(int argc, char *argv[])
 	cout << "Pre-analysis" << endl;
 	graph.AnalyseGraph();
 	cout << "Pre-colouring" << endl;
-	graph.ColourResults();
+	graph.ColourWaterGroup();
 	cout << "Graph done" << endl;
 
 	// load texture
@@ -101,11 +102,19 @@ int main(int argc, char *argv[])
 
 		static bool cHeld = false;
 		if (!cHeld && glfwGetKey(app.getWindow(), GLFW_KEY_C) == GLFW_PRESS) {
-			graph.ColourResults();
+			graph.ColourShapeResults();
 			cHeld = true;
 		}
 		if (cHeld && glfwGetKey(app.getWindow(), GLFW_KEY_C) == GLFW_RELEASE) {
 			cHeld = false;
+		}
+		static bool vHeld = false;
+		if (!vHeld && glfwGetKey(app.getWindow(), GLFW_KEY_V) == GLFW_PRESS) {
+			graph.ColourWaterGroup();
+			vHeld = true;
+		}
+		if (vHeld && glfwGetKey(app.getWindow(), GLFW_KEY_V) == GLFW_RELEASE) {
+			vHeld = false;
 		}
 
 		/*

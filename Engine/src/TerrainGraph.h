@@ -19,6 +19,7 @@ public:
 	float GetGradient() { return m_gradient; }
 	std::vector<TerrainEdge*> GetEdges() { return m_edges; }
 	TerrainShape GetShape() { return m_shape; }
+	int GetFlowGroup() { return m_waterShedID; }
 
 	void SetPos(glm::vec3 p) { m_pos = p; }
 	void SetNormal(glm::vec3 n) { m_normal = n; CalculateGradient(); }
@@ -26,6 +27,10 @@ public:
 
 	// Find the shape of the vertex
 	void CalculateShape();
+	bool CalculateFlow();
+	void MakeFlowGroup(std::vector<TerrainVertex*> &visited, int id);
+
+	void AddFlowSource(TerrainVertex* source);
 
 private:
 	// Calculate gradient of vertex normal
@@ -43,7 +48,9 @@ private:
 	std::vector<std::vector<TerrainEdge*>> m_groups;
 	std::vector<TerrainEdge*> m_steepestUp;
 	std::vector<TerrainEdge*> m_steepestDown;
-	float simVal = 0.1f;
+	float m_simVal = 0.1f;
+	std::vector<TerrainVertex*> m_flowFrom;
+	int m_waterShedID = -1;
 };
 
 class TerrainEdge {
@@ -54,6 +61,7 @@ public:
 	EdgeType GetType() { return m_type; }
 	float GetGradient(TerrainVertex* root);
 	TerrainVertex* GetPoint(int p) { return m_points[p]; }
+	TerrainVertex* GetOtherPoint(TerrainVertex* tv);
 
 	void SetPoints(TerrainVertex* v1, TerrainVertex* v2);
 	void SetType(EdgeType t);
@@ -61,6 +69,8 @@ public:
 	// Return the angle in radians between a given vector and this edge (from the given root node)
 	// Ignores the y axis
 	float GetXZRotatation(TerrainVertex* root, glm::vec3 origin);
+
+	void FlowDown(TerrainVertex* from);
 
 private:
 	// Calculate gradient between points
@@ -82,7 +92,8 @@ public:
 
 	void CreateGraph();
 	void AnalyseGraph();
-	void ColourResults();
+	void ColourWaterGroup();
+	void ColourShapeResults();
 
 private:
 	PolyMesh* m_pm;
@@ -94,4 +105,5 @@ private:
 	TerrainEdge* FindExistingEdge(int first, int second);
 	std::vector<std::pair<int, int>> m_prevEdgePairs;
 	std::vector<TerrainEdge*> m_prevEdges;
+	std::vector<TerrainVertex*> m_flowless;
 };

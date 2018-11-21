@@ -2,6 +2,7 @@
 
 #include "TerrainGraph.h"
 #include <math.h>
+#include <algorithm>
 
 using namespace std;
 
@@ -57,7 +58,7 @@ void TerrainVertex::CalculateShape() {
 		// For each edge/gradient
 		for (int i = 1; i < grads.size(); ++i) {
 			// If gradients are similar
-			if (SimilarGradients(simVal, grads[i], grads[i - 1])) {
+			if (SimilarGradients(m_simVal, grads[i], grads[i - 1])) {
 				// Add to current group of edges
 				m_groups.back().push_back(m_edges[i]);
 			}
@@ -72,7 +73,7 @@ void TerrainVertex::CalculateShape() {
 	// If more than 2 groups exist
 	if (m_groups.size() >= 3) {
 		// Check if first and last group could wrap into each other
-		if (SimilarGradients(simVal, m_groups.front().front()->GetGradient(this),
+		if (SimilarGradients(m_simVal, m_groups.front().front()->GetGradient(this),
 			m_groups.back().front()->GetGradient(this))) {
 			// Add last list to first list
 			for (TerrainEdge* te : m_groups.back()) {
@@ -114,11 +115,11 @@ void TerrainVertex::CalculateShape() {
 		// If only one item exists in simplify
 	case(1):
 		// Edges slope up from vertex
-		if (m_groups[0].front()->GetGradient(this) > simVal) {
+		if (m_groups[0].front()->GetGradient(this) > m_simVal) {
 			m_shape = PIT;
 		}
 		// Edges slope down to vertex
-		else if (m_groups[0].front()->GetGradient(this) < -simVal) {
+		else if (m_groups[0].front()->GetGradient(this) < -m_simVal) {
 			m_shape = PEAK;
 		}
 		// Edges do not experience large change around vertex
@@ -134,7 +135,7 @@ void TerrainVertex::CalculateShape() {
 		// For both groups
 		for (int i = 0; i < 2; ++i) {
 			// If this pair is a flat group
-			if (fabsf(m_groups[i].front()->GetGradient(this)) <= simVal) {
+			if (fabsf(m_groups[i].front()->GetGradient(this)) <= m_simVal) {
 				// Store other gradient in nonFlat
 				nonFlat = m_groups[(i + 1) % 2].front()->GetGradient(this);
 				// Exit for loop
@@ -142,11 +143,11 @@ void TerrainVertex::CalculateShape() {
 			}
 		}
 		// If steep group slopes up
-		if (nonFlat > simVal) {
+		if (nonFlat > m_simVal) {
 			m_shape = HILLBASE;
 		}
 		// If steep group sloped down
-		else if (nonFlat < -simVal) {
+		else if (nonFlat < -m_simVal) {
 			m_shape = HILLTOP;
 		}
 		// If no flat group exists
@@ -168,10 +169,10 @@ void TerrainVertex::CalculateShape() {
 		// Go through groups and increment count variables
 		for (vector<TerrainEdge*> vte : m_groups) {
 			float grad = vte.front()->GetGradient(this);
-			if (grad > simVal) {
+			if (grad > m_simVal) {
 				countPos++;
 			}
-			else if (grad < -simVal) {
+			else if (grad < -m_simVal) {
 				countNeg++;
 			}
 			else {
@@ -207,6 +208,38 @@ void TerrainVertex::CalculateShape() {
 	}
 }
 
+bool TerrainVertex::CalculateFlow() {
+	/*if (m_steepestDown.size() == 0) {
+		return false;
+	}*/
+	float grad = 0 + 0.00001;
+	// Find steepest grad
+	for (TerrainEdge* te : m_edges) {
+		if (te->GetGradient(this) < grad) {
+			grad = (te->GetGradient(this));
+		}
+		//te->FlowDown(this);
+
+	}
+	vector<TerrainEdge*> tes;
+	// Find gradients matching saved gradient
+	for (TerrainEdge* te : m_edges) {
+		if (te->GetGradient(this) <= grad + 0.00001) {
+			tes.push_back(te);
+		}
+	}
+	if (tes.size() == 0) {
+		return false;
+	}
+	bool outBool = false;
+	for (TerrainEdge* te : tes) {
+		if (find(m_flowFrom.begin(), m_flowFrom.end(), te->GetOtherPoint(this)) == m_flowFrom.end()) {
+			te->FlowDown(this);
+			outBool = true;
+		}
+	}
+	return outBool;
+}
 
 void TerrainVertex::OrderEdges() {
 	vector<float> angles;
@@ -253,6 +286,30 @@ void TerrainVertex::CalculateGradient() {
 	m_gradient = CalculateGradientHelp(m_normal);
 }
 
+void TerrainVertex::MakeFlowGroup(vector<TerrainVertex*> &visited, int id) {
+	if (m_steepestDown.size() == 0 && this->m_waterShedID != -1) {
+		return;
+	}
+	if (find(m_flowFrom.begin(), m_flowFrom.end(), this) != m_flowFrom.end()) {
+		return;
+	}
+	visited.push_back(this);
+	// If not part of any group
+	if (m_waterShedID == -1) {
+		m_waterShedID = id;
+	}
+	else {
+		m_waterShedID = -2;
+	}
+	for (TerrainVertex* te : m_flowFrom) {
+		te->MakeFlowGroup(visited, id);
+	}
+}
+
+void TerrainVertex::AddFlowSource(TerrainVertex* source) {
+	m_flowFrom.push_back(source);
+}
+
 // TERRAIN EDGE ----------------------------------
 
 TerrainEdge::TerrainEdge() {
@@ -281,6 +338,15 @@ float TerrainEdge::GetGradient(TerrainVertex* root) {
 	}
 	// Return positive gradient
 	return m_gradient;
+}
+
+TerrainVertex* TerrainEdge::GetOtherPoint(TerrainVertex* te) {
+	if (m_points[0] != te) {
+		return m_points[0];
+	}
+	else {
+		return m_points[1];
+	}
 }
 
 void TerrainEdge::SetPoints(TerrainVertex* v1, TerrainVertex* v2) {
@@ -354,6 +420,18 @@ void TerrainEdge::CalculateGradient() {
 	glm::vec3 diff = m_points[1]->GetPos() - m_points[0]->GetPos();
 	// Assign abolute value of gradient
 	m_gradient = fabsf(CalculateGradientHelp(diff));
+}
+
+void TerrainEdge::FlowDown(TerrainVertex* source) {
+	// If first point is not the source
+	if (m_points[0] != source) {
+		// Add the source
+		m_points[0]->AddFlowSource(source);
+	}
+	else {
+		// If first point was the source, add flow to the second point
+		m_points[1]->AddFlowSource(source);
+	}
 }
 
 // TERRAIN GRAPH ------------------------------------------------------------------
@@ -436,9 +514,66 @@ void TerrainGraph::AnalyseGraph() {
 	for (TerrainVertex* v : m_verts) {
 		v->CalculateShape();
 	}
+	for (TerrainVertex* v : m_verts) {
+		// If a vertex does not flow to another vertex add to flowless list
+		if (!v->CalculateFlow()) {
+			m_flowless.push_back(v);
+		}
+	}
+	int i = 0;
+	for (TerrainVertex* v : m_flowless) {
+		vector<TerrainVertex*> visited;
+		v->MakeFlowGroup(visited, i++);
+	}
 }
 
-void TerrainGraph::ColourResults() {
+void TerrainGraph::ColourWaterGroup() {
+	m_uniqueColours.clear();
+	m_nonUniqueColours.clear();
+	int max = m_flowless.size();
+	if (m_flowless.size() == 0) {
+		max = 2;
+	}
+	static int lim = 0;
+	for (TerrainVertex* v : m_verts) {
+		int flowGroup = v->GetFlowGroup();
+		switch (flowGroup)
+		{
+			// Multiple flow groups
+		case(-2):
+			m_uniqueColours.push_back(glm::vec4(0.9f, 0.9f, 0.9f, 1.0f)); // White-ish
+			break;
+			// No flow groups
+		case(-1):
+			m_uniqueColours.push_back(glm::vec4(0.2f, 0.2f, 0.2f, 1.0f)); // Grey
+			break;
+		default:
+			glm::vec4 colour = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+			if (flowGroup > lim) {
+				colour = glm::vec4(0.2f, 0.2f, 0.2f, 1.0f);
+			}
+			else {
+				for (int i = 0; i < 3; ++i) {
+					// Varying colours
+					colour[i] = (float)((int)((((float)i / 3.0f) + (float)flowGroup / (float)max) * 100.0f) % 100) / 100.0f;
+				}
+			}
+			m_uniqueColours.push_back(colour);
+			break;
+		}
+	}
+	// Make non-indexed colour list for buffer
+	vector<OBJIndex> indices = m_pm->getOBJModel().OBJIndices;
+	for (int c = 0; c < indices.size(); ++c) {
+		m_nonUniqueColours.push_back(m_uniqueColours[indices[c].vertexIndex]);
+	}
+	// Add non-indexed colours to buffer
+	m_pm->addColourBuffer(m_nonUniqueColours);
+	++lim;
+	lim = lim % max;
+}
+
+void TerrainGraph::ColourShapeResults() {
 	m_uniqueColours.clear();
 	m_nonUniqueColours.clear();
 	static int lim = 0;
