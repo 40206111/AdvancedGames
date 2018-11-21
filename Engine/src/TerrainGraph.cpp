@@ -290,6 +290,9 @@ void TerrainVertex::MakeFlowGroup(vector<TerrainVertex*> &visited, int id) {
 	if (m_steepestDown.size() == 0 && this->m_waterShedID != -1) {
 		return;
 	}
+	if (id == m_waterShedID) {
+		return;
+	}
 	if (find(m_flowFrom.begin(), m_flowFrom.end(), this) != m_flowFrom.end()) {
 		return;
 	}
