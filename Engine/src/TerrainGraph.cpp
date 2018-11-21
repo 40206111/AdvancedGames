@@ -558,7 +558,9 @@ void TerrainGraph::ColourWaterGroup() {
 			else {
 				for (int i = 0; i < 3; ++i) {
 					// Varying colours
-					colour[i] = (float)((int)((((float)i / 3.0f) + (float)flowGroup / (float)max) * 100.0f) % 100) / 100.0f;
+					float c;
+					c = sin(((float)i / 3.0f + (float)flowGroup / (float)max) * 2.0f * M_PI) * 0.25 + 0.75;
+					colour[i] = c;
 				}
 			}
 			m_uniqueColours.push_back(colour);
