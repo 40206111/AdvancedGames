@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
 	// maybe saddle.obj
 	// peak.obj
 	// valley.obj
-	PolyMesh mesh = PolyMesh::PolyMesh("./resources/models/detail cliff tris.obj");
+	PolyMesh mesh = PolyMesh::PolyMesh("./resources/models/stabbs-8k.obj");
 	// material
 	Phong phong = Phong::Phong(glm::vec3(.2f, .2f, .2f), glm::vec3(.5f, .2f, .2f), glm::vec3(.2f, .2f, .2f), 12);
 	// Model
@@ -55,8 +55,8 @@ int main(int argc, char *argv[])
 
 	// transformations
 	//mesh.scale(glm::vec3(1.5f, 1.5f, 1.5f));
-	mesh.scale(glm::vec3(0.4));
-	//mesh.scale(glm::vec3(0.1f));
+	//mesh.scale(glm::vec3(0.4));
+	mesh.scale(glm::vec3(0.1f));
 
 	TerrainGraph graph;
 	graph.SetPolyMesh(&mesh);
@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 	cout << "Pre-analysis" << endl;
 	graph.AnalyseGraph();
 	cout << "Pre-colouring" << endl;
-	graph.ColourWaterGroup();
+	graph.ColourGradients();
 	cout << "Graph done" << endl;
 
 	// load texture
@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
 	texture.loadTexture("./resources/textures/marbl01.jpg", true);
 
 	// compute view matrix using glm::lookat
-	glm::mat4  view = glm::lookAt(glm::vec3(7.0f, 9.0f, 7.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	glm::mat4  view = glm::lookAt(glm::vec3(7.0f, 7.0f, 7.0f), glm::vec3(0.0f, -2.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	app.setView(view);
 
 	// projection matrix

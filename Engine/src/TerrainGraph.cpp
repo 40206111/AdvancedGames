@@ -219,8 +219,6 @@ bool TerrainVertex::CalculateFlow() {
 		if (te->GetGradient(this) < grad) {
 			grad = (te->GetGradient(this));
 		}
-		//te->FlowDown(this);
-
 	}
 	vector<TerrainEdge*> tes;
 	// Find gradients matching saved gradient
@@ -300,6 +298,12 @@ void TerrainVertex::MakeFlowGroup(vector<TerrainVertex*> &visited, int id) {
 	if (find(m_flowFrom.begin(), m_flowFrom.end(), this) != m_flowFrom.end()) {
 		return;
 	}
+	if (visited.size() == 0) {
+		m_flowEnd = true;
+	}
+	else {
+		m_flowEnd = false;
+	}
 	visited.push_back(this);
 	// If not part of any group
 	if (m_waterShedID == -1) {
@@ -310,6 +314,16 @@ void TerrainVertex::MakeFlowGroup(vector<TerrainVertex*> &visited, int id) {
 	}
 	for (TerrainVertex* te : m_flowFrom) {
 		te->MakeFlowGroup(visited, id);
+	}
+}
+
+void TerrainVertex::CalculateFlowEdge() {
+	m_flowEdge = false;
+	for (TerrainEdge* te : m_edges) {
+		if (te->GetOtherPoint(this)->GetFlowGroup() != m_waterShedID) {
+			m_flowEdge = true;
+			return;
+		}
 	}
 }
 
@@ -335,7 +349,7 @@ void TerrainVertex::FollowSteepUp(vector<TerrainVertex*> &visited, int id) {
 			steepest = grad;
 		}
 	}
-	
+
 	for (TerrainEdge* te : m_edges) {
 		if (te->GetGradient(this) >= steepest - 0.00001) {
 			TerrainVertex* goTo = te->GetOtherPoint(this);
@@ -578,6 +592,9 @@ void TerrainGraph::AnalyseGraph() {
 		vector<TerrainVertex*> visited;
 		v->MakeFlowGroup(visited, i++);
 	}
+	for (TerrainVertex* v : m_verts) {
+		v->CalculateFlowEdge();
+	}
 }
 
 void TerrainGraph::ColourWaterGroup() {
@@ -611,6 +628,22 @@ void TerrainGraph::ColourWaterGroup() {
 					float c;
 					c = sin(((float)i / 3.0f + (float)flowGroup / (float)max) * 2.0f * M_PI) * 0.25 + 0.75;
 					colour[i] = c;
+				}
+				if (v->IsFlowEnd()) {
+					glm::vec4 inv = glm::vec4(1.0f) - colour;
+					if (true) {
+						colour = inv;
+						colour += glm::vec4(0.f);
+					}
+					else {
+						inv = inv * 0.8f;
+						colour += inv;
+					}
+					colour.a = 1.0f;
+				}
+				else if (v->IsFlowEdge()) {
+					colour = colour * 0.8f;
+					colour.a = 1.0f;
 				}
 			}
 			m_uniqueColours.push_back(colour);
@@ -684,7 +717,7 @@ void TerrainGraph::ColourGradients() {
 	m_nonUniqueColours.clear();
 
 	for (TerrainVertex* v : m_verts) {
-		m_uniqueColours.push_back(glm::vec4(glm::vec3(v->GetGradient()),1.0f));
+		m_uniqueColours.push_back(glm::vec4(glm::vec3(v->GetGradient()), 1.0f));
 	}
 
 	vector<OBJIndex> indices = m_pm->getOBJModel().OBJIndices;

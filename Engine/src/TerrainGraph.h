@@ -20,6 +20,8 @@ public:
 	std::vector<TerrainEdge*> GetEdges() { return m_edges; }
 	TerrainShape GetShape() { return m_shape; }
 	int GetFlowGroup() { return m_waterShedID; }
+	bool IsFlowEdge() { return m_flowEdge; }
+	bool IsFlowEnd() { return m_flowEnd; }
 
 	void SetPos(glm::vec3 p) { m_pos = p; }
 	void AddNormal(glm::vec3 n) { m_normal += n; }
@@ -33,6 +35,7 @@ public:
 	// Returns false if this vertex does not flow
 	bool CalculateFlow();
 	void MakeFlowGroup(std::vector<TerrainVertex*> &visited, int id);
+	void CalculateFlowEdge();
 	void FollowSteepUp(std::vector<TerrainVertex*> &visited, int id);
 
 	void AddFlowSource(TerrainVertex* source);
@@ -56,6 +59,8 @@ private:
 	float m_simVal = 0.1f;
 	std::vector<TerrainVertex*> m_flowFrom;
 	int m_waterShedID = -1;
+	bool m_flowEdge;
+	bool m_flowEnd;
 };
 
 class TerrainEdge {

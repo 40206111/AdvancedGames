@@ -26,7 +26,7 @@ vec3 getLightColour(){
 vec4 computeColour(){
 	
     // ambient 
-    float ambientIntensity = .4f;
+    float ambientIntensity = .7f;
     vec3 ambient = getLightColour() * ambientIntensity;
 
     // diffuse
