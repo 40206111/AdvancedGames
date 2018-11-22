@@ -665,11 +665,14 @@ void TerrainGraph::ColourWaterEdges() {
 	m_uniqueColours.clear();
 	m_nonUniqueColours.clear();
 	for (TerrainVertex* v : m_verts) {
-		if (v->IsFlowEdge()) {
-			m_uniqueColours.push_back(glm::vec4(0.7f, 0.1f, 0.3f, 1.0f));
+		if (v->IsFlowEnd()) {
+			m_uniqueColours.push_back(glm::vec4(0.4f, 0.0f, 0.4f, 1.0f));
+		}
+		else if (v->IsFlowEdge()) {
+			m_uniqueColours.push_back(glm::vec4(0.7f, 0.2f, 0.1f, 1.0f));
 		}
 		else {
-			m_uniqueColours.push_back(glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+			m_uniqueColours.push_back(glm::vec4(0.4f, 0.4f, 0.4f, 1.0f));
 		}
 	}
 	// Make non-indexed colour list for buffer
