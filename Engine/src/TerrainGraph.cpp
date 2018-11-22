@@ -308,14 +308,8 @@ void TerrainVertex::MakeFlowGroup(vector<TerrainVertex*> &visited, int id) {
 	else {
 		m_waterShedID = -2;
 	}
-	/*for (TerrainVertex* te : m_flowFrom) {
+	for (TerrainVertex* te : m_flowFrom) {
 		te->MakeFlowGroup(visited, id);
-	}*/
-	if (m_flowFrom.size() / m_edges.size() > 0.2f) {
-		m_shape = TROUGH_V;
-	}
-	else {
-		m_shape = FLAT;
 	}
 }
 
@@ -582,7 +576,7 @@ void TerrainGraph::AnalyseGraph() {
 	int i = 0;
 	for (TerrainVertex* v : m_flowless) {
 		vector<TerrainVertex*> visited;
-		v->FollowSteepUp(visited, i++);
+		v->MakeFlowGroup(visited, i++);
 	}
 }
 
