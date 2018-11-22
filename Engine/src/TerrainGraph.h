@@ -103,6 +103,7 @@ public:
 	void CreateGraph();
 	void AnalyseGraph();
 	void ColourWaterGroup();
+	void ColourWaterEdges();
 	void ColourShapeResults();
 	void ColourGradients();
 

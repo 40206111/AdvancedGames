@@ -661,6 +661,26 @@ void TerrainGraph::ColourWaterGroup() {
 	lim = lim % max;
 }
 
+void TerrainGraph::ColourWaterEdges() {
+	m_uniqueColours.clear();
+	m_nonUniqueColours.clear();
+	for (TerrainVertex* v : m_verts) {
+		if (v->IsFlowEdge()) {
+			m_uniqueColours.push_back(glm::vec4(0.7f, 0.1f, 0.3f, 1.0f));
+		}
+		else {
+			m_uniqueColours.push_back(glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+		}
+	}
+	// Make non-indexed colour list for buffer
+	vector<OBJIndex> indices = m_pm->getOBJModel().OBJIndices;
+	for (int c = 0; c < indices.size(); ++c) {
+		m_nonUniqueColours.push_back(m_uniqueColours[indices[c].vertexIndex]);
+	}
+	// Add non-indexed colours to buffer
+	m_pm->addColourBuffer(m_nonUniqueColours);
+}
+
 void TerrainGraph::ColourShapeResults() {
 	m_uniqueColours.clear();
 	m_nonUniqueColours.clear();

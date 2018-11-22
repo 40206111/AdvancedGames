@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 	cout << "Pre-analysis" << endl;
 	graph.AnalyseGraph();
 	cout << "Pre-colouring" << endl;
-	graph.ColourGradients();
+	graph.ColourWaterEdges();
 	cout << "Graph done" << endl;
 
 	// load texture
@@ -115,6 +115,22 @@ int main(int argc, char *argv[])
 		}
 		if (vHeld && glfwGetKey(app.getWindow(), GLFW_KEY_V) == GLFW_RELEASE) {
 			vHeld = false;
+		}
+		static bool zHeld = false;
+		if (!zHeld && glfwGetKey(app.getWindow(), GLFW_KEY_Z) == GLFW_PRESS) {
+			graph.ColourGradients();
+			zHeld = true;
+		}
+		if (zHeld && glfwGetKey(app.getWindow(), GLFW_KEY_Z) == GLFW_RELEASE) {
+			zHeld = false;
+		}
+		static bool xHeld = false;
+		if (!xHeld && glfwGetKey(app.getWindow(), GLFW_KEY_X) == GLFW_PRESS) {
+			graph.ColourWaterEdges();
+			xHeld = true;
+		}
+		if (xHeld && glfwGetKey(app.getWindow(), GLFW_KEY_X) == GLFW_RELEASE) {
+			xHeld = false;
 		}
 
 		/*
