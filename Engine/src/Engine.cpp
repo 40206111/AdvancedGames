@@ -55,6 +55,7 @@ int main(int argc, char *argv[])
 
 
 	// transformations
+	//mesh.scale(glm::vec3(.8f));
 	//mesh.scale(glm::vec3(1.5f, 1.5f, 1.5f));
 	//mesh.scale(glm::vec3(0.4));
 	mesh.scale(glm::vec3(0.1f));
