@@ -169,13 +169,17 @@ void TerrainVertex::CalculateShape() {
 		int countEq = 0;
 		// Go through groups and increment count variables
 		for (vector<TerrainEdge*> vte : m_groups) {
+			// Use first gradient in group as reference
 			float grad = vte.front()->GetGradient(this);
+			// If slopes up, add positive
 			if (grad > m_simVal) {
 				countPos++;
 			}
+			// If slopes down, add negative
 			else if (grad < -m_simVal) {
 				countNeg++;
 			}
+			// Else, add flat
 			else {
 				countEq++;
 			}
@@ -213,27 +217,34 @@ bool TerrainVertex::CalculateFlow() {
 	/*if (m_steepestDown.size() == 0) {
 		return false;
 	}*/
-	float grad = 0 + 0.00001;
-	// Find steepest grad
+	float grad = 0 + 0.00001f;
+	// Find steepest downwards gradient
 	for (TerrainEdge* te : m_edges) {
 		if (te->GetGradient(this) < grad) {
 			grad = (te->GetGradient(this));
 		}
 	}
 	vector<TerrainEdge*> tes;
-	// Find gradients matching saved gradient
+	// Find edges with gradients matching saved gradient
 	for (TerrainEdge* te : m_edges) {
-		if (te->GetGradient(this) <= grad + 0.00001) {
+		if (te->GetGradient(this) <= grad + 0.00001f) {
 			tes.push_back(te);
 		}
 	}
+	// If no edges were found
 	if (tes.size() == 0) {
+		// Return false for no-flowing
 		return false;
 	}
+	// Output boolean, false = no-flow, true = flows
 	bool outBool = false;
+	// For each downward edge
 	for (TerrainEdge* te : tes) {
+		// If the other point doesn't flow into this point (avoid cyclical flow on flat surfaces)
 		if (find(m_flowFrom.begin(), m_flowFrom.end(), te->GetOtherPoint(this)) == m_flowFrom.end()) {
+			// Tell other vertex that this vertex flows into them
 			te->FlowDown(this);
+			// Set outbool to true to say that this vertex flows
 			outBool = true;
 		}
 	}
@@ -281,10 +292,12 @@ void TerrainVertex::OrderEdges() {
 }
 
 void TerrainVertex::CalculateGradient() {
-	// Assign value of gradient (not absolute)
+	// If normal is non-zero
 	if (m_normal != glm::vec3(0.0f)) {
+		// Normalise the normal
 		m_normal = glm::normalize(m_normal);
 	}
+	// Assign value of gradient (not absolute)
 	m_gradient = CalculateGradientHelp(m_normal);
 }
 
@@ -292,36 +305,51 @@ void TerrainVertex::MakeFlowGroup(vector<TerrainVertex*> &visited, int id) {
 	if (m_steepestDown.size() == 0 && this->m_waterShedID != -1) {
 		return;
 	}
+	// If already part of the group being made, return
 	if (id == m_waterShedID) {
 		return;
 	}
+	// If this vertex in in its own list of things that flow to it ??????????
+	// Should maybe be visited.back instead of this ?????
 	if (find(m_flowFrom.begin(), m_flowFrom.end(), this) != m_flowFrom.end()) {
 		return;
 	}
+	// If nothing in visited list, this is the end of the flow
 	if (visited.size() == 0) {
 		m_flowEnd = true;
 	}
 	else {
 		m_flowEnd = false;
 	}
+	// Add this vertex to visited list
 	visited.push_back(this);
 	// If not part of any group
 	if (m_waterShedID == -1) {
+		// Set id to current group id
 		m_waterShedID = id;
 	}
+	// If already part of a group
 	else {
+		// Set id to -2 (meaning in multiple groups)
 		m_waterShedID = -2;
 	}
-	for (TerrainVertex* te : m_flowFrom) {
-		te->MakeFlowGroup(visited, id);
+	// For each vertex that flows into this
+	for (TerrainVertex* v : m_flowFrom) {
+		// Perform this function on that vertex
+		v->MakeFlowGroup(visited, id);
 	}
 }
 
 void TerrainVertex::CalculateFlowEdge() {
+	// Initialise flow edge to false
 	m_flowEdge = false;
+	// For each edge
 	for (TerrainEdge* te : m_edges) {
+		// If the edge leads to a vertex in a different watershed-group
 		if (te->GetOtherPoint(this)->GetFlowGroup() != m_waterShedID) {
+			// Set this vertex as a border of its group
 			m_flowEdge = true;
+			// Exit function (further testing unneccessary)
 			return;
 		}
 	}
@@ -331,29 +359,43 @@ void TerrainVertex::FollowSteepUp(vector<TerrainVertex*> &visited, int id) {
 	if (m_steepestUp.size() == 0 && this->m_waterShedID != -1) {
 		return;
 	}
+	// If already part of this group return
 	if (id == m_waterShedID) {
 		return;
 	}
+	// Add this vertex to visited list
 	visited.push_back(this);
 	// If not part of any group
 	if (m_waterShedID == -1) {
+		// Make this vertex id the given id
 		m_waterShedID = id;
 	}
+	// Else if already in a group
 	else {
+		// Make id -2 (for multiple groups)
 		m_waterShedID = -2;
 	}
+	// Record of highest angle
 	float steepest = 0.0f;
+	// For each edge
 	for (TerrainEdge* te : m_edges) {
+		// Get edge gradient
 		float grad = te->GetGradient(this);
+		// If edge-gradient in steeper than previously recorded
 		if (grad > steepest) {
+			// Replace old steepest value with new steepest
 			steepest = grad;
 		}
 	}
-
+	// For each edge
 	for (TerrainEdge* te : m_edges) {
+		// If edge gradient is equal, or very close to steepest
 		if (te->GetGradient(this) >= steepest - 0.00001) {
+			// Get point at other end of the edge
 			TerrainVertex* goTo = te->GetOtherPoint(this);
+			// If vertex is not in visited list
 			if (find(visited.begin(), visited.end(), goTo) == visited.end()) {
+				// Perform this function on other vertex
 				goTo->FollowSteepUp(visited, id);
 			}
 		}
@@ -365,11 +407,14 @@ void TerrainVertex::AddFlowSource(TerrainVertex* source) {
 }
 
 bool TerrainVertex::AddEdge(TerrainEdge* edge) {
+	// If this edge has not been added to this vertex before
 	if (find(m_edges.begin(), m_edges.end(), edge) == m_edges.end()) {
 		m_edges.push_back(edge);
+		// Return true for successful add
 		return true;
 	}
 	else {
+		// Return false for edge not added
 		return false;
 	}
 }
@@ -605,7 +650,9 @@ void TerrainGraph::ColourWaterGroup() {
 		max = 2;
 	}
 	static int lim = 0;
+	// For each vertex
 	for (TerrainVertex* v : m_verts) {
+		// ID of the group the vertex is part of
 		int flowGroup = v->GetFlowGroup();
 		switch (flowGroup)
 		{
@@ -618,34 +665,40 @@ void TerrainGraph::ColourWaterGroup() {
 			m_uniqueColours.push_back(glm::vec4(0.2f, 0.2f, 0.2f, 1.0f)); // Grey
 			break;
 		default:
+			// Colour to be added to buffer
 			glm::vec4 colour = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+			// If this group should not be rendered
 			if (flowGroup > lim) {
+				// Colour dark grey
 				colour = glm::vec4(0.2f, 0.2f, 0.2f, 1.0f);
 			}
 			else {
+				// For each value: red, green, and blue
 				for (int i = 0; i < 3; ++i) {
-					// Varying colours
 					float c;
+					// Get value from sin wave, displaced by group id and r/g/b index
 					c = sin(((float)i / 3.0f + (float)flowGroup / (float)max) * 2.0f * M_PI) * 0.25 + 0.75;
+					// Set specific value
 					colour[i] = c;
 				}
+				// If end of the flow
 				if (v->IsFlowEnd()) {
+					// Get inverse of colour
 					glm::vec4 inv = glm::vec4(1.0f) - colour;
-					if (true) {
-						colour = inv;
-						colour += glm::vec4(0.f);
-					}
-					else {
-						inv = inv * 0.8f;
-						colour += inv;
-					}
+					// Make colour its inverse
+					colour = inv;
+					// Maximise alpha
 					colour.a = 1.0f;
 				}
+				// Else if edge vertex
 				else if (v->IsFlowEdge()) {
+					// Colour darker by 20%
 					colour = colour * 0.8f;
+					// Maximise alpha
 					colour.a = 1.0f;
 				}
 			}
+			// Add colour to list
 			m_uniqueColours.push_back(colour);
 			break;
 		}
@@ -664,13 +717,17 @@ void TerrainGraph::ColourWaterGroup() {
 void TerrainGraph::ColourWaterEdges() {
 	m_uniqueColours.clear();
 	m_nonUniqueColours.clear();
+	// For all vertices
 	for (TerrainVertex* v : m_verts) {
+		// If flow end point, colour dark purple
 		if (v->IsFlowEnd()) {
 			m_uniqueColours.push_back(glm::vec4(0.4f, 0.0f, 0.4f, 1.0f));
 		}
+		// If edge colour orange
 		else if (v->IsFlowEdge()) {
 			m_uniqueColours.push_back(glm::vec4(0.7f, 0.2f, 0.1f, 1.0f));
 		}
+		// Colour other vertices grey
 		else {
 			m_uniqueColours.push_back(glm::vec4(0.4f, 0.4f, 0.4f, 1.0f));
 		}
@@ -688,11 +745,15 @@ void TerrainGraph::ColourShapeResults() {
 	m_uniqueColours.clear();
 	m_nonUniqueColours.clear();
 	static int lim = 0;
+	// For all vertices
 	for (TerrainVertex* v : m_verts) {
+		// Vertex shape
 		TerrainShape test = v->GetShape();
+		// If type matches limit value
 		if (test > lim || test < lim) {
 			test = FLAT;
 		}
+		// Switch on vertex type
 		switch (test) {
 		case(PEAK):
 			m_uniqueColours.push_back(glm::vec4(0.7, 0.1, 0.1, 1.0)); // Red
@@ -726,11 +787,14 @@ void TerrainGraph::ColourShapeResults() {
 			break;
 		}
 	}
+	// Make non-indexed colour list
 	vector<OBJIndex> indices = m_pm->getOBJModel().OBJIndices;
 	for (int c = 0; c < indices.size(); ++c) {
 		m_nonUniqueColours.push_back(m_uniqueColours[indices[c].vertexIndex]);
 	}
+	// Add non-indexed colour list to buffer
 	m_pm->addColourBuffer(m_nonUniqueColours);
+	// Increment and loop limit
 	lim++;
 	lim = lim % 9;
 }
@@ -738,14 +802,16 @@ void TerrainGraph::ColourShapeResults() {
 void TerrainGraph::ColourGradients() {
 	m_uniqueColours.clear();
 	m_nonUniqueColours.clear();
-
+	// For each vertex
 	for (TerrainVertex* v : m_verts) {
+		// Add grey with value of vertex gradient
 		m_uniqueColours.push_back(glm::vec4(glm::vec3(v->GetGradient()), 1.0f));
 	}
-
+	// Make non-indexed colour list
 	vector<OBJIndex> indices = m_pm->getOBJModel().OBJIndices;
 	for (int c = 0; c < indices.size(); ++c) {
 		m_nonUniqueColours.push_back(m_uniqueColours[indices[c].vertexIndex]);
 	}
+	// Add non-indexed colour list to buffer
 	m_pm->addColourBuffer(m_nonUniqueColours);
 }
