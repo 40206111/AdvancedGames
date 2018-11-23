@@ -3,6 +3,7 @@
 #include "TerrainGraph.h"
 #include <math.h>
 #include <algorithm>
+#include <map>
 
 using namespace std;
 
@@ -355,6 +356,40 @@ void TerrainVertex::CalculateFlowEdge() {
 	}
 }
 
+void TerrainVertex::MakeBridge() {
+	// Edges that lead to other flow groups
+	vector<TerrainEdge*> others;
+	// For each edge of this vertex
+	for (TerrainEdge* te : m_edges) {
+		// If in a different flow group
+		if (te->GetOtherPoint(this)->GetFlowGroup() != m_waterShedID) {
+			// Add to list of others
+			others.push_back(te);
+		}
+	}
+	// Tracks lowest gradient
+	float grad = 1.1f;
+	// Edge to bridge to
+	TerrainEdge* bridge = nullptr;
+	// For each edge not in flow group
+	for (TerrainEdge* te : others) {
+		// If new lowest gradient is found
+		if (te->GetGradient(this) < grad) {
+			grad = te->GetGradient(this);
+			bridge = te;
+		}
+	}
+	// If a bridge vertex was found
+	if (bridge != nullptr) {
+		// Swap group id's
+		/*int myID = m_waterShedID;
+		m_waterShedID = bridge->GetOtherPoint(this)->GetFlowGroup();
+		bridge->GetOtherPoint(this)->SetFlowGroup(myID);*/
+		bridge->GetOtherPoint(this)->SetAsBridge();
+		SetAsBridge();
+	}
+}
+
 void TerrainVertex::FollowSteepUp(vector<TerrainVertex*> &visited, int id) {
 	if (m_steepestUp.size() == 0 && this->m_waterShedID != -1) {
 		return;
@@ -632,13 +667,47 @@ void TerrainGraph::AnalyseGraph() {
 			m_flowless.push_back(v);
 		}
 	}
+	// Watershed ID
 	int i = 0;
 	for (TerrainVertex* v : m_flowless) {
 		vector<TerrainVertex*> visited;
-		v->MakeFlowGroup(visited, i++);
+		v->MakeFlowGroup(visited, i++); // ID increments after function call
 	}
+	vector<vector<TerrainVertex*>> edgeLists;
+	map<int, int> groupIndex;
 	for (TerrainVertex* v : m_verts) {
 		v->CalculateFlowEdge();
+		// If vertex is an edge of a flow group
+		if (v->IsFlowEdge()) {
+			// Get the flow group id
+			int id = v->GetFlowGroup();
+			// If id is not a key in the map
+			if (groupIndex.find(id) == groupIndex.end()) {
+				// Link this id to the array value it has in edgeLists
+				groupIndex[id] = edgeLists.size();
+				edgeLists.push_back(vector<TerrainVertex*>());
+			}
+			// Add vertex to list of same group vertices
+			edgeLists[groupIndex[id]].push_back(v);
+		}
+	}
+	// For each watershed group in the list of watershed groups
+	for (vector<TerrainVertex*> group : edgeLists) {
+		// To track lowest known y value
+		float lowY = group.front()->GetPos().y;
+		// Vertex with lowest y in group
+		TerrainVertex* lowVert = group.front();
+		// For each vertex in group
+		for (TerrainVertex* v : group) {
+			// If new lowest y value is found
+			if (v->GetPos().y < lowY) {
+				// Update tracking variables
+				lowY = v->GetPos().y;
+				lowVert = v;
+			}
+		}
+		// Make a bridge to adjacent group from lowest vertex
+		lowVert->MakeBridge();
 	}
 }
 
@@ -689,6 +758,11 @@ void TerrainGraph::ColourWaterGroup() {
 					colour = inv;
 					// Maximise alpha
 					colour.a = 1.0f;
+				}
+				// If group bridge
+				else if(v->IsBridge()){
+					// Make full white
+					colour = glm::vec4(1.0f);
 				}
 				// Else if edge vertex
 				else if (v->IsFlowEdge()) {

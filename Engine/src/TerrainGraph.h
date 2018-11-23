@@ -22,8 +22,11 @@ public:
 	int GetFlowGroup() { return m_waterShedID; }
 	bool IsFlowEdge() { return m_flowEdge; }
 	bool IsFlowEnd() { return m_flowEnd; }
+	bool IsBridge() { return m_bridge; }
 
 	void SetPos(glm::vec3 p) { m_pos = p; }
+	void SetFlowGroup(int id) { m_waterShedID = id; }
+	void SetAsBridge() { m_bridge = true; }
 	void AddNormal(glm::vec3 n) { m_normal += n; }
 	// Add an edge to the vertex
 	// Returns false if edge was already added
@@ -36,6 +39,7 @@ public:
 	bool CalculateFlow();
 	void MakeFlowGroup(std::vector<TerrainVertex*> &visited, int id);
 	void CalculateFlowEdge();
+	void MakeBridge();
 	void FollowSteepUp(std::vector<TerrainVertex*> &visited, int id);
 
 	void AddFlowSource(TerrainVertex* source);
@@ -61,6 +65,7 @@ private:
 	int m_waterShedID = -1;
 	bool m_flowEdge;
 	bool m_flowEnd;
+	bool m_bridge = false;
 };
 
 class TerrainEdge {
