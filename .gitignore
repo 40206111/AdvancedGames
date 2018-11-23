@@ -332,3 +332,4 @@ ASALocalRun/
 #Whitelist
 !/Engine/resources/*
 !/Engine/resources/*/*
+Engine/Release/

@@ -797,6 +797,10 @@ void TerrainGraph::ColourWaterEdges() {
 		if (v->IsFlowEnd()) {
 			m_uniqueColours.push_back(glm::vec4(0.4f, 0.0f, 0.4f, 1.0f));
 		}
+		// If vertex is bridge, colour full white
+		else if (v->IsBridge()) {
+			m_uniqueColours.push_back(glm::vec4(1.0f));
+		}
 		// If edge colour orange
 		else if (v->IsFlowEdge()) {
 			m_uniqueColours.push_back(glm::vec4(0.7f, 0.2f, 0.1f, 1.0f));
