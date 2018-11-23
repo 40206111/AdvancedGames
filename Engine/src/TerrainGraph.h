@@ -4,8 +4,8 @@
 #include "OBJLoader.h"
 #include "PolyMesh.h"
 
-enum TerrainShape { PEAK, PIT, RIDGE_V, TROUGH_V, HILLTOP, HILLBASE, SLOPE, FLAT, SADDLE };
-enum EdgeType { DEFAULT, RIDGE_E, TROUGH_E, WATERSHED };
+enum TerrainShape { DEFAULT_V, PEAK, PIT, RIDGE_V, TROUGH_V, HILLTOP, HILLBASE, SLOPE, FLAT, SADDLE };
+enum EdgeType { DEFAULT_E, RIDGE_E, TROUGH_E, WATERSHED };
 
 class TerrainEdge;
 

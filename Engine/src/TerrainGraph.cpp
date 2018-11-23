@@ -423,7 +423,7 @@ bool TerrainVertex::AddEdge(TerrainEdge* edge) {
 
 TerrainEdge::TerrainEdge() {
 	m_gradient = 0.0f;
-	m_type = DEFAULT;
+	m_type = DEFAULT_E;
 }
 TerrainEdge::~TerrainEdge() {}
 
@@ -750,8 +750,8 @@ void TerrainGraph::ColourShapeResults() {
 		// Vertex shape
 		TerrainShape test = v->GetShape();
 		// If type matches limit value
-		if (test > lim || test < lim) {
-			test = FLAT;
+		if (test > lim/* || test < lim*/) {
+			test = DEFAULT_V;
 		}
 		// Switch on vertex type
 		switch (test) {
@@ -777,7 +777,7 @@ void TerrainGraph::ColourShapeResults() {
 			m_uniqueColours.push_back(glm::vec4(0.5, 0.1, 0.5, 1.0)); // Balanced purple
 			break;
 		case(FLAT):
-			m_uniqueColours.push_back(glm::vec4(0.6, 0.6, 0.6, 1.0)); // Light grey
+			m_uniqueColours.push_back(glm::vec4(0.4, 0.4, 0.0, 1.0)); // Dark Yellow
 			break;
 		case(SADDLE):
 			m_uniqueColours.push_back(glm::vec4(0.1, 0.7, 0.1, 1.0)); // Green
@@ -796,7 +796,7 @@ void TerrainGraph::ColourShapeResults() {
 	m_pm->addColourBuffer(m_nonUniqueColours);
 	// Increment and loop limit
 	lim++;
-	lim = lim % 9;
+	lim = lim % (SADDLE + 1);
 }
 
 void TerrainGraph::ColourGradients() {
