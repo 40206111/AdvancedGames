@@ -60,7 +60,7 @@ private:
 	std::vector<std::vector<TerrainEdge*>> m_groups;
 	std::vector<TerrainEdge*> m_steepestUp;
 	std::vector<TerrainEdge*> m_steepestDown;
-	float m_simVal = 0.1f;
+	float m_simVal = 0.2f;
 	std::vector<TerrainVertex*> m_flowFrom;
 	int m_waterShedID = -1;
 	bool m_flowEdge;

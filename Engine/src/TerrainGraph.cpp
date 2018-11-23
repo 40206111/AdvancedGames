@@ -828,6 +828,9 @@ void TerrainGraph::ColourShapeResults() {
 		// Vertex shape
 		TerrainShape test = v->GetShape();
 		// If type matches limit value
+	/*	if (!(test == HILLTOP || test == FLAT)) {
+			test = DEFAULT_V;
+		}*/
 		if (test > lim/* || test < lim*/) {
 			test = DEFAULT_V;
 		}
@@ -852,10 +855,10 @@ void TerrainGraph::ColourShapeResults() {
 			m_uniqueColours.push_back(glm::vec4(0.4, 0.1, 0.7, 1.0)); // Blue purple
 			break;
 		case(SLOPE):
-			m_uniqueColours.push_back(glm::vec4(0.5, 0.1, 0.5, 1.0)); // Balanced purple
+			m_uniqueColours.push_back(glm::vec4(0.5, 0.5, 0.5, 1.0)); // Grey
 			break;
 		case(FLAT):
-			m_uniqueColours.push_back(glm::vec4(0.4, 0.4, 0.0, 1.0)); // Dark Yellow
+			m_uniqueColours.push_back(glm::vec4(1.0, 1.0, 0.4, 1.0)); // Dark Yellow
 			break;
 		case(SADDLE):
 			m_uniqueColours.push_back(glm::vec4(0.1, 0.7, 0.1, 1.0)); // Green

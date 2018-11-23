@@ -31,7 +31,7 @@ bool GLFWApplication::shouldRun() {
 // Is called whenever a key is pressed / released via GLFW
 static void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mode)
 {
-	std::cout << "keyboard event" << std::endl;
+	//std::cout << "keyboard event" << std::endl;
 
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 	{

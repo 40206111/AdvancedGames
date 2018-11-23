@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
 	/*
 		CREATE APP CONTAINER
 	*/
-	GLFWApplication app = GLFWApplication::GLFWApplication("GLFW engine test", 1000, 1000);
+	GLFWApplication app = GLFWApplication::GLFWApplication("GLFW engine test", 1500, 1500);
 	app.init();
 
 	/*
@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
 	// peak.obj
 	// valley.obj
 	PolyMesh mesh = PolyMesh::PolyMesh("./resources/models/stabbs-8k.obj");
-	mesh.rotate(-3.1415f / 4.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+	mesh.rotate(-3.0f * 3.1415f / 4.0f, glm::vec3(0.0f, 1.0f, 0.0f));
 	// material
 	Phong phong = Phong::Phong(glm::vec3(.2f, .2f, .2f), glm::vec3(.5f, .2f, .2f), glm::vec3(.2f, .2f, .2f), 12);
 	// Model
@@ -134,6 +134,27 @@ int main(int argc, char *argv[])
 		if (xHeld && glfwGetKey(app.getWindow(), GLFW_KEY_X) == GLFW_RELEASE) {
 			xHeld = false;
 		}
+
+		float rotSpeed = 0.002f;
+		if (glfwGetKey(app.getWindow(), GLFW_KEY_D) == GLFW_PRESS) {
+			mesh.rotate(-rotSpeed, glm::vec3(0.0f, 1.0f, 0.0f));
+		}
+		if (glfwGetKey(app.getWindow(), GLFW_KEY_A) == GLFW_PRESS) {
+			mesh.rotate(rotSpeed, glm::vec3(0.0f, 1.0f, 0.0f));
+		}
+		if (glfwGetKey(app.getWindow(), GLFW_KEY_W) == GLFW_PRESS) {
+			mesh.rotate(-rotSpeed, glm::vec3(1.0f, 0.0f, 0.0f));
+		}
+		if (glfwGetKey(app.getWindow(), GLFW_KEY_S) == GLFW_PRESS) {
+			mesh.rotate(rotSpeed, glm::vec3(1.0f, 0.0f, 0.0f));
+		}
+		if (glfwGetKey(app.getWindow(), GLFW_KEY_Q) == GLFW_PRESS) {
+			mesh.rotate(-rotSpeed, glm::vec3(0.0f, 0.0f, 1.0f));
+		}
+		if (glfwGetKey(app.getWindow(), GLFW_KEY_E) == GLFW_PRESS) {
+			mesh.rotate(rotSpeed, glm::vec3(0.0f, 0.0f, 1.0f));
+		}
+
 
 		/*
 		**	RENDER
