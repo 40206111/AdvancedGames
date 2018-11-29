@@ -6,6 +6,7 @@
 
 enum TerrainShape { DEFAULT_V, PEAK, PIT, RIDGE_V, TROUGH_V, HILLTOP, HILLBASE, SLOPE, FLAT, SADDLE };
 enum EdgeType { DEFAULT_E, RIDGE_E, TROUGH_E, WATERSHED };
+enum WaterType { NONE, RIVER, LAKE };
 
 class TerrainEdge;
 
@@ -27,6 +28,7 @@ public:
 	void SetPos(glm::vec3 p) { m_pos = p; }
 	void SetFlowGroup(int id) { m_waterShedID = id; }
 	void SetAsBridge() { m_bridge = true; }
+	void SetWaterType(WaterType w);
 	void AddNormal(glm::vec3 n) { m_normal += n; }
 	// Add an edge to the vertex
 	// Returns false if edge was already added
@@ -50,22 +52,23 @@ private:
 	// Put edges in anti-clockwise order from x axis
 	void OrderEdges();
 	// Are edges order by rotation
-	bool m_ordered = false;
+	bool m_ordered;
 
 	glm::vec3 m_pos;
-	glm::vec3 m_normal = glm::vec3(0.0f);
+	glm::vec3 m_normal;
 	float m_gradient;
 	std::vector<TerrainEdge*> m_edges;
 	TerrainShape m_shape;
 	std::vector<std::vector<TerrainEdge*>> m_groups;
 	std::vector<TerrainEdge*> m_steepestUp;
 	std::vector<TerrainEdge*> m_steepestDown;
-	float m_simVal = 0.2f;
+	float m_simVal;
 	std::vector<TerrainVertex*> m_flowFrom;
-	int m_waterShedID = -1;
+	int m_waterShedID;
 	bool m_flowEdge;
 	bool m_flowEnd;
-	bool m_bridge = false;
+	bool m_bridge;
+	WaterType m_water;
 };
 
 class TerrainEdge {
@@ -116,10 +119,10 @@ public:
 	// Designate lakes
 	void MakeLakes();
 
-
 private:
 	bool m_complete;
 	int m_id;
+	float m_exitHeight;
 	std::vector<TerrainVertex*> m_bridges;
 	std::vector<TerrainVertex*> m_edges;
 	std::vector<TerrainVertex*> m_members;

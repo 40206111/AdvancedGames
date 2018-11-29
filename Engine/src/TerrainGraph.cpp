@@ -37,8 +37,27 @@ float CalculateGradientHelp(glm::vec3 diff) {
 
 // TERRAIN VERTEX -------------------------------------------------------------------------
 
-TerrainVertex::TerrainVertex() {}
+TerrainVertex::TerrainVertex() {
+	m_ordered = false;
+	m_pos = glm::vec3(0.0f);
+	m_normal = glm::vec3(0.0f);
+	m_shape = DEFAULT_V;
+	m_simVal = 0.2f;
+	m_waterShedID = -1;
+	m_flowEdge = false;
+	m_flowEnd = false;
+	m_bridge = false;
+	m_water = NONE;
+}
 TerrainVertex::~TerrainVertex() {}
+
+void TerrainVertex::SetWaterType(WaterType w) {
+	// If value of stored watertype is less than new one
+	if (m_water < w) {
+		// Set new watertype
+		m_water = w;
+	}
+}
 
 void TerrainVertex::CalculateShape() {
 	// If the edges are not ordered already, order them
@@ -654,7 +673,73 @@ std::vector<TerrainVertex*> TerrainWaterShed::FindBridges() {
 		return;
 	}
 	// Lowest height found
-	float lowest = m_edges.front()->GetPos().y;
+	float lowest;
+	// Lowest vertex found
+	TerrainVertex* lowV;
+	// No bridge details are saved yet
+	bool firstBridge = true;
+	// Lowest vertices to bridge to
+	vector<TerrainVertex*> lowOthers;
+	// For each vertex in edges
+	for (TerrainVertex* v : m_edges) {
+		// If edge vertex is lower than other vertices
+		if (firstBridge || v->GetPos().y < lowest) {
+			// Get edges v has
+			vector<TerrainEdge*> vEdges = v->GetEdges();
+			// Tracking for the other vertex
+			float otherLowest;
+			TerrainVertex* otherLowV;
+			// The first vertex to be found from a different group
+			bool firstOther = true;
+			// For each edge
+			for (TerrainEdge* e : vEdges) {
+				// Other vertex
+				TerrainVertex* vOther = e->GetOtherPoint(v);
+				// If other vertex is in a different group
+				if (vOther->GetFlowGroup() != v->GetFlowGroup()) {
+					// If other variables are uninitialised
+					if (firstOther) {
+						otherLowest = vOther->GetPos().y;
+						otherLowV = vOther;
+					}
+					else {
+						// If the other vertex is also lower than lowest
+						if (vOther->GetPos().y < otherLowest) {
+							otherLowest = vOther->GetPos().y;
+							otherLowV = vOther;
+						}
+					}
+				}
+			}
+			// If the edge vertex, and its potential bridges, are both lower than last lowest vertex
+			if (firstBridge || (v->GetPos().y < lowest && otherLowest < lowest)) {
+				// Replace lowest info with the heighest of either this vertex, or its lowest bridge vertex
+				lowest = (v->GetPos().y > otherLowest ? v->GetPos().y : otherLowest);
+				// Save this side of bridge
+				lowV = v;
+				// Save other side of bridge
+				lowOthers.clear();
+				lowOthers.push_back(otherLowV);
+				// Cancel first bridge
+				firstBridge = false;
+			}
+		}
+	}
+	// Save bridge details
+	m_bridges.push_back(lowV);
+	m_exitHeight = lowest;
+	// Return bridge vertices in other watersheds
+	return lowOthers;
+}
+
+void TerrainWaterShed::MakeLakes() {
+	// For each memeber vertex
+	for (TerrainVertex* v : m_members) {
+		// If below the height of water exit
+		if (v->GetPos().y <= m_exitHeight) {
+			v->SetWaterType(LAKE);
+		}
+	}
 }
 
 // TERRAIN GRAPH ------------------------------------------------------------------
