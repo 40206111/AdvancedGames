@@ -38,7 +38,7 @@ public:
 	// Returns false if this vertex does not flow
 	bool CalculateFlow();
 	void MakeFlowGroup(std::vector<TerrainVertex*> &visited, int id);
-	void CalculateFlowEdge();
+	bool CalculateFlowEdge();
 	void MakeBridge();
 	void FollowSteepUp(std::vector<TerrainVertex*> &visited, int id);
 
@@ -96,6 +96,33 @@ private:
 	EdgeType m_type;
 	glm::vec3 m_normDir;
 	glm::vec3 m_normDirFlat;
+};
+
+class TerrainWaterShed {
+public:
+	TerrainWaterShed();
+	~TerrainWaterShed();
+
+	// Get the ID of this watershed group
+	int GetID() { return m_id; }
+	// Set ID for this group and all stored vertices
+	void SetID(int id);
+	// Adds a list of vertices to this watershed group
+	void AddMembers(std::vector<TerrainVertex*> newMembers);
+	// Add a bridge into this group, from another group
+	void AddBridge(TerrainVertex* in);
+	// Find the bridges of this group. Returns the bridge vertices for the other groups to add.
+	std::vector<TerrainVertex*> FindBridges();
+	// Designate lakes
+	void MakeLakes();
+
+
+private:
+	bool m_complete;
+	int m_id;
+	std::vector<TerrainVertex*> m_bridges;
+	std::vector<TerrainVertex*> m_edges;
+	std::vector<TerrainVertex*> m_members;
 };
 
 class TerrainGraph {

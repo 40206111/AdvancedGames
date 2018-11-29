@@ -341,7 +341,7 @@ void TerrainVertex::MakeFlowGroup(vector<TerrainVertex*> &visited, int id) {
 	}
 }
 
-void TerrainVertex::CalculateFlowEdge() {
+bool TerrainVertex::CalculateFlowEdge() {
 	// Initialise flow edge to false
 	m_flowEdge = false;
 	// For each edge
@@ -351,9 +351,10 @@ void TerrainVertex::CalculateFlowEdge() {
 			// Set this vertex as a border of its group
 			m_flowEdge = true;
 			// Exit function (further testing unneccessary)
-			return;
+			break;
 		}
 	}
+	return m_flowEdge;
 }
 
 void TerrainVertex::MakeBridge() {
@@ -578,6 +579,84 @@ void TerrainEdge::FlowDown(TerrainVertex* source) {
 	}
 }
 
+// TERRAIN WATERSHED ------------------------------------------------------------------
+
+TerrainWaterShed::TerrainWaterShed() {
+	m_id = -1;
+	m_complete = false;
+}
+
+TerrainWaterShed::~TerrainWaterShed() {}
+
+void TerrainWaterShed::SetID(int id) {
+	// Set own ID
+	m_id = id;
+	// Set ID of the vertices
+	for (TerrainVertex* v : m_members) {
+		v->SetFlowGroup(id);
+	}
+}
+
+void TerrainWaterShed::AddMembers(vector<TerrainVertex*> newMembers) {
+	// For each new vertex
+	for (TerrainVertex* v : newMembers) {
+		// Update vertex's id
+		v->SetFlowGroup(m_id);
+		// Add to members
+		m_members.push_back(v);
+	}
+	// Re-evaluate current edges
+	for (int e = 0; e < m_edges.size(); ++e) {
+		// If edge vertex at e is no longer an edge
+		if (!(m_edges[e]->CalculateFlowEdge())) {
+			// Remove vertex from edge list
+			m_edges.erase(m_edges.begin() + e);
+			// Decrement e to avoid skipping vertices
+			e--;
+		}
+	}
+	// Find new watershed edges
+	// For each member
+	for (TerrainVertex* v : m_members) {
+		// If v finds itself on an edge
+		if (v->CalculateFlowEdge()) {
+			// Add v to edges list
+			m_edges.push_back(v);
+			// Break loop
+			break;
+		}
+	}
+}
+
+void TerrainWaterShed::AddBridge(TerrainVertex* in) {
+	// Vertex is already a bridge
+	bool isHere = false;
+	// For each bridge
+	for (TerrainVertex* v : m_bridges) {
+		// If the in vertex is already a bridge
+		if (in == v) {
+			isHere = true;
+			break;
+		}
+	}
+	// If in is not here already
+	if (!isHere) {
+		// Add in to bridges
+		m_bridges.push_back(in);
+	}
+}
+
+std::vector<TerrainVertex*> TerrainWaterShed::FindBridges() {
+	// Empty list of bridges
+	m_bridges.clear();
+	// If no edges exist
+	if (m_edges.size() == 0) {
+		return;
+	}
+	// Lowest height found
+	float lowest = m_edges.front()->GetPos().y;
+}
+
 // TERRAIN GRAPH ------------------------------------------------------------------
 
 TerrainGraph::TerrainGraph() {}
@@ -760,7 +839,7 @@ void TerrainGraph::ColourWaterGroup() {
 					colour.a = 1.0f;
 				}
 				// If group bridge
-				else if(v->IsBridge()){
+				else if (v->IsBridge()) {
 					// Make full white
 					colour = glm::vec4(1.0f);
 				}
