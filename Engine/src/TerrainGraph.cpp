@@ -1013,6 +1013,32 @@ void TerrainGraph::ColourWaterEdges() {
 	m_pm->addColourBuffer(m_nonUniqueColours);
 }
 
+void TerrainGraph::ColourWaterBodies() {
+	m_uniqueColours.clear();
+	m_nonUniqueColours.clear();
+	// For all vertices
+	for (TerrainVertex* v : m_verts) {
+		switch (v->GetWaterType()) {
+		case(LAKE):
+			m_uniqueColours.push_back(glm::vec4(0.3f, 0.3f, 0.6f, 1.0f)); // Dark blue
+			break;
+		case(RIVER):
+			m_uniqueColours.push_back(glm::vec4(0.5f, 0.5f, 1.0f, 1.0f)); // Light blue
+			break;
+		default:
+			m_uniqueColours.push_back(glm::vec4(0.3f, 0.3f, 0.3f, 1.0f)); // Grey
+			break;
+		}
+	}
+	// Make non-indexed colour list for buffer
+	vector<OBJIndex> indices = m_pm->getOBJModel().OBJIndices;
+	for (int c = 0; c < indices.size(); ++c) {
+		m_nonUniqueColours.push_back(m_uniqueColours[indices[c].vertexIndex]);
+	}
+	// Add non-indexed colours to buffer
+	m_pm->addColourBuffer(m_nonUniqueColours);
+}
+
 void TerrainGraph::ColourShapeResults() {
 	m_uniqueColours.clear();
 	m_nonUniqueColours.clear();

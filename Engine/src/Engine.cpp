@@ -134,6 +134,14 @@ int main(int argc, char *argv[])
 		if (xHeld && glfwGetKey(app.getWindow(), GLFW_KEY_X) == GLFW_RELEASE) {
 			xHeld = false;
 		}
+		static bool bHeld = false;
+		if (!bHeld && glfwGetKey(app.getWindow(), GLFW_KEY_B) == GLFW_PRESS) {
+			graph.ColourWaterBodies();
+			bHeld = true;
+		}
+		if (bHeld && glfwGetKey(app.getWindow(), GLFW_KEY_B) == GLFW_RELEASE) {
+			bHeld = false;
+		}
 
 		float rotSpeed = 0.002f;
 		if (glfwGetKey(app.getWindow(), GLFW_KEY_D) == GLFW_PRESS) {

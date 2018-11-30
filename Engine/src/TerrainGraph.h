@@ -142,6 +142,7 @@ public:
 	void AnalyseGraph();
 	void ColourWaterGroup();
 	void ColourWaterEdges();
+	void ColourWaterBodies();
 	void ColourShapeResults();
 	void ColourGradients();
 
