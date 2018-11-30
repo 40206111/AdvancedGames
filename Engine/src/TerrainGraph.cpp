@@ -617,6 +617,11 @@ void TerrainWaterShed::SetID(int id) {
 }
 
 void TerrainWaterShed::AddMembers(vector<TerrainVertex*> newMembers) {
+	// If this group has no members
+	if (m_members.size() == 0) {
+		// Set this groups id to match vertex id
+		m_id = newMembers.front()->GetFlowGroup();
+	}
 	// For each new vertex
 	for (TerrainVertex* v : newMembers) {
 		// Update vertex's id
@@ -641,8 +646,6 @@ void TerrainWaterShed::AddMembers(vector<TerrainVertex*> newMembers) {
 		if (v->CalculateFlowEdge()) {
 			// Add v to edges list
 			m_edges.push_back(v);
-			// Break loop
-			break;
 		}
 	}
 }
@@ -662,15 +665,19 @@ void TerrainWaterShed::AddBridge(TerrainVertex* in) {
 	if (!isHere) {
 		// Add in to bridges
 		m_bridges.push_back(in);
+		// Tell vertex it's a bridge
+		in->SetAsBridge();
 	}
 }
 
 std::vector<TerrainVertex*> TerrainWaterShed::FindBridges() {
 	// Empty list of bridges
 	m_bridges.clear();
+	// Return list of bridges in other groups
+	vector<TerrainVertex*> lowOthers;
 	// If no edges exist
 	if (m_edges.size() == 0) {
-		return;
+		return lowOthers;
 	}
 	// Lowest height found
 	float lowest;
@@ -678,8 +685,6 @@ std::vector<TerrainVertex*> TerrainWaterShed::FindBridges() {
 	TerrainVertex* lowV;
 	// No bridge details are saved yet
 	bool firstBridge = true;
-	// Lowest vertices to bridge to
-	vector<TerrainVertex*> lowOthers;
 	// For each vertex in edges
 	for (TerrainVertex* v : m_edges) {
 		// If edge vertex is lower than other vertices
@@ -834,44 +839,28 @@ void TerrainGraph::AnalyseGraph() {
 	// Watershed ID
 	int i = 0;
 	for (TerrainVertex* v : m_flowless) {
+		// Vertices in the flow group
 		vector<TerrainVertex*> visited;
+		// Recursively find vertices in group
 		v->MakeFlowGroup(visited, i++); // ID increments after function call
+		// Make new terrain watershed
+		TerrainWaterShed* tws = new TerrainWaterShed();
+		// Add vertices to it
+		tws->AddMembers(visited);
+		// Add watershed to list
+		m_watersheds.push_back(tws);
 	}
-	vector<vector<TerrainVertex*>> edgeLists;
-	map<int, int> groupIndex;
-	for (TerrainVertex* v : m_verts) {
-		v->CalculateFlowEdge();
-		// If vertex is an edge of a flow group
-		if (v->IsFlowEdge()) {
-			// Get the flow group id
-			int id = v->GetFlowGroup();
-			// If id is not a key in the map
-			if (groupIndex.find(id) == groupIndex.end()) {
-				// Link this id to the array value it has in edgeLists
-				groupIndex[id] = edgeLists.size();
-				edgeLists.push_back(vector<TerrainVertex*>());
-			}
-			// Add vertex to list of same group vertices
-			edgeLists[groupIndex[id]].push_back(v);
+	// For each watershed group
+	for (TerrainWaterShed* ws : m_watersheds) {
+		// Find bridges
+		vector<TerrainVertex*> bridges = ws->FindBridges();
+		// For each vertex that is a bridge from this watershed
+		for (TerrainVertex* v : bridges) {
+			// Make vertex a bridge
+			v->SetAsBridge();
 		}
-	}
-	// For each watershed group in the list of watershed groups
-	for (vector<TerrainVertex*> group : edgeLists) {
-		// To track lowest known y value
-		float lowY = group.front()->GetPos().y;
-		// Vertex with lowest y in group
-		TerrainVertex* lowVert = group.front();
-		// For each vertex in group
-		for (TerrainVertex* v : group) {
-			// If new lowest y value is found
-			if (v->GetPos().y < lowY) {
-				// Update tracking variables
-				lowY = v->GetPos().y;
-				lowVert = v;
-			}
-		}
-		// Make a bridge to adjacent group from lowest vertex
-		lowVert->MakeBridge();
+		// Create lakes
+		ws->MakeLakes();
 	}
 }
 

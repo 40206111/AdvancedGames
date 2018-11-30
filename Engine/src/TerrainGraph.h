@@ -153,4 +153,6 @@ private:
 	std::vector<std::pair<int, int>> m_prevEdgePairs;
 	std::vector<TerrainEdge*> m_prevEdges;
 	std::vector<TerrainVertex*> m_flowless;
+
+	std::vector<TerrainWaterShed*> m_watersheds;
 };
