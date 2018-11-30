@@ -9,6 +9,7 @@ enum EdgeType { DEFAULT_E, RIDGE_E, TROUGH_E, WATERSHED };
 enum WaterType { NONE, RIVER, LAKE };
 
 class TerrainEdge;
+class TerrainFace;
 
 class TerrainVertex {
 public:
@@ -102,6 +103,32 @@ private:
 	EdgeType m_type;
 	glm::vec3 m_normDir;
 	glm::vec3 m_normDirFlat;
+};
+
+class TerrainFace {
+public:
+	TerrainFace();
+	~TerrainFace();
+
+	glm::vec3 GetNormal() { return m_normal; }
+
+	void SetVerts(vector<TerrainVertex*> vs);
+	void SetEdges(vector<TerrainEdge*> es) { m_edges = es; }
+
+	bool ContainsRay();
+	// Return edges attached to a vertex in anti-clockwise order
+	std::vector<TerrainEdge*> AttachedEdges(TerrainVertex* pivot);
+	// Return anti-clockwise edge.  Returns nullptr if given the anti-clockwise edge.
+	TerrainEdge* GetNextEdge(TerrainEdge* first, TerrainVertex* pivot);
+
+private:
+	std::vector<TerrainVertex*> m_verts;
+	std::vector<TerrainEdge*> m_edges;
+	glm::vec3 m_normal;
+	// Maximum values of all vertex positions
+	glm::vec3 m_max;
+	// Minimum values of all vertex positions
+	glm::vec3 m_min;
 };
 
 class TerrainWaterShed {

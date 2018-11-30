@@ -601,6 +601,34 @@ void TerrainEdge::FlowDown(TerrainVertex* source) {
 	}
 }
 
+// TERRAIN FACE ------------------------------------------------------------------
+
+TerrainFace::TerrainFace() {}
+TerrainFace::~TerrainFace() {}
+
+void TerrainFace::SetVerts(vector<TerrainVertex*> vs) { 
+	// Save vertex vector to face
+	m_verts = vs;
+	// Initialise max and min as coords of first vertex
+	m_max = m_min = m_verts.front()->GetPos();
+	// Ignoring the first vertex, go through face's vertices
+	for (int v = 1; v < m_verts.size(); ++v) {
+		// For each of x, y and z
+		for (int i = 0; i < 3; ++i) {
+			// If this vertex has a lower axis position than the minimum
+			if (m_verts[v]->GetPos()[i] < m_min[i]) {
+				// Set new minimum on this axis
+				m_min[i] = m_verts[v]->GetPos()[i];
+			}
+			// If this vertex has a higher axis position than the maximum
+			else if (m_verts[v]->GetPos()[i] > m_max[i]) {
+				// Set new maximum on this axis
+				m_max[i] = m_verts[v]->GetPos()[i];
+			}
+		}
+	}
+}
+
 // TERRAIN WATERSHED ------------------------------------------------------------------
 
 TerrainWaterShed::TerrainWaterShed() {
