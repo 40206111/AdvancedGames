@@ -43,6 +43,7 @@ TerrainVertex::TerrainVertex() {
 	m_normal = glm::vec3(0.0f);
 	m_shape = DEFAULT_V;
 	m_simVal = 0.2f;
+	m_flowTo = nullptr;
 	m_waterShedID = -1;
 	m_flowEdge = false;
 	m_flowEnd = false;
@@ -266,6 +267,8 @@ bool TerrainVertex::CalculateFlow() {
 			te->FlowDown(this);
 			// Set outbool to true to say that this vertex flows
 			outBool = true;
+			// Save target vertex for later
+			m_flowTo = te->GetOtherPoint(this);
 		}
 	}
 	return outBool;
@@ -668,6 +671,19 @@ void TerrainWaterShed::AddBridge(TerrainVertex* in) {
 		// Tell vertex it's a bridge
 		in->SetAsBridge();
 	}
+	// Vertex to flow to
+	TerrainVertex* next = in;
+	// While there's vertices to flow to
+	while (next != nullptr) {
+		// If this vertex is already a river or lake stop flowing
+		if (next->GetWaterType() >= RIVER) {
+			break;
+		}
+		// Set vertex as a river
+		next->SetWaterType(RIVER);
+		// Set next as the next vertex in the steepest path
+		next = next->GetFlowTo();
+	}
 }
 
 std::vector<TerrainVertex*> TerrainWaterShed::FindBridges() {
@@ -682,7 +698,7 @@ std::vector<TerrainVertex*> TerrainWaterShed::FindBridges() {
 	// Lowest height found
 	float lowest;
 	// Lowest vertex found
-	TerrainVertex* lowV;
+	TerrainVertex* lowV = nullptr;
 	// No bridge details are saved yet
 	bool firstBridge = true;
 	// For each vertex in edges
@@ -730,9 +746,13 @@ std::vector<TerrainVertex*> TerrainWaterShed::FindBridges() {
 			}
 		}
 	}
-	// Save bridge details
-	m_bridges.push_back(lowV);
-	m_exitHeight = lowest;
+	// If a vertex has been found
+	if (lowV != nullptr) {
+		// Save bridge details
+		lowV->SetAsBridge();
+		m_bridges.push_back(lowV);
+		m_exitHeight = lowest;
+	}
 	// Return bridge vertices in other watersheds
 	return lowOthers;
 }
@@ -856,8 +876,13 @@ void TerrainGraph::AnalyseGraph() {
 		vector<TerrainVertex*> bridges = ws->FindBridges();
 		// For each vertex that is a bridge from this watershed
 		for (TerrainVertex* v : bridges) {
-			// Make vertex a bridge
-			v->SetAsBridge();
+			// Find watershed group it is part of 
+			for (TerrainWaterShed* ws : m_watersheds) {
+				if (ws->GetID() == v->GetFlowGroup()) {
+					// Add it as a bridge to the group
+					ws->AddBridge(v);
+				}
+			}
 		}
 		// Create lakes
 		ws->MakeLakes();
@@ -916,6 +941,22 @@ void TerrainGraph::ColourWaterGroup() {
 				else if (v->IsBridge()) {
 					// Make full white
 					colour = glm::vec4(1.0f);
+				}
+				// If in a lake
+				else if (v->GetWaterType() == LAKE) {
+					// Colour darker by 40%
+					colour = colour * 0.6f;
+					// Maximise alpha
+					colour.a = 1.0f;
+				}
+				// If vertex is a river
+				else if (v->GetWaterType() == RIVER) {
+					// Invert colour
+					colour = glm::vec4(1.0f) - colour;
+					// Increase intensity
+					colour += glm::vec4(0.5f);
+					// Max alpha
+					colour.a = 1.0f;
 				}
 				// Else if edge vertex
 				else if (v->IsFlowEdge()) {

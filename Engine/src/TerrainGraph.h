@@ -20,10 +20,12 @@ public:
 	float GetGradient() { return m_gradient; }
 	std::vector<TerrainEdge*> GetEdges() { return m_edges; }
 	TerrainShape GetShape() { return m_shape; }
+	TerrainVertex* GetFlowTo() { return m_flowTo; }
 	int GetFlowGroup() { return m_waterShedID; }
 	bool IsFlowEdge() { return m_flowEdge; }
 	bool IsFlowEnd() { return m_flowEnd; }
 	bool IsBridge() { return m_bridge; }
+	WaterType GetWaterType() { return m_water; }
 
 	void SetPos(glm::vec3 p) { m_pos = p; }
 	void SetFlowGroup(int id) { m_waterShedID = id; }
@@ -63,6 +65,7 @@ private:
 	std::vector<TerrainEdge*> m_steepestUp;
 	std::vector<TerrainEdge*> m_steepestDown;
 	float m_simVal;
+	TerrainVertex* m_flowTo;
 	std::vector<TerrainVertex*> m_flowFrom;
 	int m_waterShedID;
 	bool m_flowEdge;
