@@ -159,6 +159,10 @@ public:
 	std::vector<TerrainVertex*> FindBridges();
 	// Designate lakes
 	void MakeLakes();
+	// True if the watershed leaves the graph region
+	bool IsComplete() { return m_complete; }
+	// Moves this regions details into the given region
+	void MergeInto(TerrainWaterShed* ws);
 
 private:
 	bool m_complete;

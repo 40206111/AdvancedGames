@@ -957,8 +957,17 @@ void TerrainWaterShed::MakeLakes() {
 		// If below the height of water exit
 		if (v->GetPos().y <= m_exitHeight) {
 			v->SetWaterType(LAKE);
+			// If this vertex is on the graph edge this region is complete
+			if (v->IsGraphEdge()) {
+				m_complete = true;
+			}
 		}
 	}
+}
+
+void TerrainWaterShed::MergeInto(TerrainWaterShed* ws) {
+	// Give other group the vertices from this one
+	ws->AddMembers(m_members);
 }
 
 // TERRAIN GRAPH ------------------------------------------------------------------
@@ -1091,16 +1100,44 @@ void TerrainGraph::AnalyseGraph() {
 		// For each vertex that is a bridge from this watershed
 		for (TerrainVertex* v : bridges) {
 			// Find watershed group it is part of 
-			for (TerrainWaterShed* ws : m_watersheds) {
-				if (ws->GetID() == v->GetFlowGroup()) {
+			for (TerrainWaterShed* ws2 : m_watersheds) {
+				if (ws2->GetID() == v->GetFlowGroup()) {
 					// Add it as a bridge to the group
-					ws->AddBridge(v);
+					ws2->AddBridge(v);
+					ws->MergeInto(ws2);
 				}
 			}
 		}
 		// Create lakes
 		ws->MakeLakes();
 	}
+
+
+	//// First is water shed being bridged from, second is vertex bridged to
+	//vector<pair<TerrainWaterShed*, TerrainVertex*>> allBridges;
+	//// For each watershed group
+	//for (TerrainWaterShed* ws : m_watersheds) {
+	//	// Find bridges
+	//	vector<TerrainVertex*> bridges = ws->FindBridges();
+	//	// For each vertex that is a bridge from this watershed
+	//	for (TerrainVertex* v : bridges) {
+	//		// Add each bridge to complete list
+	//		allBridges.push_back(pair<TerrainWaterShed*, TerrainVertex*>(ws, v));
+	//	}
+	//	// Create lakes
+	//	ws->MakeLakes();
+	//}
+	//// For each vertex that is a bridge
+	//for (pair<TerrainWaterShed*, TerrainVertex*> p : allBridges) {
+	//	// Find watershed group it is part of 
+	//	for (TerrainWaterShed* ws2 : m_watersheds) {
+	//		if (ws2->GetID() == p.second->GetFlowGroup()) {
+	//			// Add it as a bridge to the group
+	//			ws2->AddBridge(p.second);
+	//			p.first->MergeInto(ws2);
+	//		}
+	//	}
+	//}
 }
 
 void TerrainGraph::ColourWaterGroup() {
