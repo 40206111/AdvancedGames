@@ -418,8 +418,8 @@ bool TerrainVertex::CalculateFlowEdge() {
 		m_flowEdge = true;
 	}
 	// Else if not a graph edge determine if edge through checking terrain edges
-	else{
-	// For each edge
+	else {
+		// For each edge
 		for (TerrainEdge* te : m_edges) {
 			// If the edge leads to a vertex in a different watershed-group
 			if (te->GetOtherPoint(this)->GetFlowGroup() != m_waterShedID) {
@@ -1093,10 +1093,13 @@ void TerrainGraph::AnalyseGraph() {
 		// Add watershed to list
 		m_watersheds.push_back(tws);
 	}
+
 	// For each watershed group
-	for (TerrainWaterShed* ws : m_watersheds) {
+	for (int w = 0; w < m_watersheds.size(); ++w) {
+		// True if watershed merged into another region
+		bool thisRemoved = false;
 		// Find bridges
-		vector<TerrainVertex*> bridges = ws->FindBridges();
+		vector<TerrainVertex*> bridges = m_watersheds[w]->FindBridges();
 		// For each vertex that is a bridge from this watershed
 		for (TerrainVertex* v : bridges) {
 			// Find watershed group it is part of 
@@ -1104,40 +1107,21 @@ void TerrainGraph::AnalyseGraph() {
 				if (ws2->GetID() == v->GetFlowGroup()) {
 					// Add it as a bridge to the group
 					ws2->AddBridge(v);
-					ws->MergeInto(ws2);
+					m_watersheds[w]->MergeInto(ws2);
+					thisRemoved = true;
 				}
 			}
 		}
 		// Create lakes
-		ws->MakeLakes();
+		m_watersheds[w]->MakeLakes();
+		// If this region was merged into another
+		if (thisRemoved) {
+			// Remove region from the list
+			m_watersheds.erase(find(m_watersheds.begin(), m_watersheds.end(), m_watersheds[w]));
+			// Decrement iterator
+			--w;
+		}
 	}
-
-
-	//// First is water shed being bridged from, second is vertex bridged to
-	//vector<pair<TerrainWaterShed*, TerrainVertex*>> allBridges;
-	//// For each watershed group
-	//for (TerrainWaterShed* ws : m_watersheds) {
-	//	// Find bridges
-	//	vector<TerrainVertex*> bridges = ws->FindBridges();
-	//	// For each vertex that is a bridge from this watershed
-	//	for (TerrainVertex* v : bridges) {
-	//		// Add each bridge to complete list
-	//		allBridges.push_back(pair<TerrainWaterShed*, TerrainVertex*>(ws, v));
-	//	}
-	//	// Create lakes
-	//	ws->MakeLakes();
-	//}
-	//// For each vertex that is a bridge
-	//for (pair<TerrainWaterShed*, TerrainVertex*> p : allBridges) {
-	//	// Find watershed group it is part of 
-	//	for (TerrainWaterShed* ws2 : m_watersheds) {
-	//		if (ws2->GetID() == p.second->GetFlowGroup()) {
-	//			// Add it as a bridge to the group
-	//			ws2->AddBridge(p.second);
-	//			p.first->MergeInto(ws2);
-	//		}
-	//	}
-	//}
 }
 
 void TerrainGraph::ColourWaterGroup() {
