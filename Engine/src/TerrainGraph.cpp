@@ -1122,13 +1122,18 @@ void TerrainGraph::AnalyseGraph() {
 			--w;
 		}
 	}
+	// Reset group id's for colour purposes
+	for (int id = 0; id < m_watersheds.size(); ++id) {
+		// Set ID
+		m_watersheds[id]->SetID(id);
+	}
 }
 
 void TerrainGraph::ColourWaterGroup() {
 	m_uniqueColours.clear();
 	m_nonUniqueColours.clear();
-	int max = m_flowless.size();
-	if (m_flowless.size() == 0) {
+	int max = m_watersheds.size();
+	if (m_watersheds.size() == 0) {
 		max = 2;
 	}
 	static int lim = 0;
