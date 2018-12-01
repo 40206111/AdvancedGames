@@ -1134,7 +1134,7 @@ void TerrainGraph::ColourWaterGroup() {
 	m_nonUniqueColours.clear();
 	int max = m_watersheds.size();
 	if (m_watersheds.size() == 0) {
-		max = 2;
+		max = 1;
 	}
 	static int lim = 0;
 	// For each vertex
