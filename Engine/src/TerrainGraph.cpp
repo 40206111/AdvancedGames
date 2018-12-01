@@ -4,6 +4,7 @@
 #include <math.h>
 #include <algorithm>
 #include <map>
+#include <deque>
 
 using namespace std;
 
@@ -49,6 +50,7 @@ TerrainVertex::TerrainVertex() {
 	m_flowEnd = false;
 	m_bridge = false;
 	m_water = NONE;
+	m_graphEdge = false;
 }
 TerrainVertex::~TerrainVertex() {}
 
@@ -275,34 +277,105 @@ bool TerrainVertex::CalculateFlow() {
 }
 
 void TerrainVertex::OrderEdges() {
-	vector<float> angles;
-	vector<int> indices;
-	// For each edge get the angle from x axis to it
-	for (int i = 0; i < m_edges.size(); ++i) {
-		// Add to angle vector
-		angles.push_back((m_edges[i]->GetXZRotatation(this, glm::vec3(1.0f, 0.0f, 0.0f))));
-		// Add to index vector
-		indices.push_back(i);
-	}
-	bool changed = true;
-	int maxI = angles.size() - 1;
-	// While changes are made to the list
-	while (changed) {
-		// Prepare to break loop
-		changed = false;
-		// From the end of the list to the start
-		for (int i = maxI; i > 0; --i) {
-			// If later value is smaller than earlier value, swap values
-			if (angles[indices[i]] < angles[indices[i - 1]]) {
-				// Swap index values
-				int tempi = indices[i];
-				indices[i] = indices[i - 1];
-				indices[i - 1] = tempi;
-				// Stay in while loop, changes may still be needed
-				changed = true;
+	//vector<float> angles; OLD
+	deque<int> indices;
+	//// For each edge get the angle from x axis to it
+	//for (int i = 0; i < m_edges.size(); ++i) {
+	//	// Add to angle vector
+	//	angles.push_back((m_edges[i]->GetXZRotatation(this, glm::vec3(1.0f, 0.0f, 0.0f))));
+	//	// Add to index vector
+	//	indices.push_back(i);
+	//}
+	//bool changed = true;
+	//int maxI = angles.size() - 1;
+	//// While changes are made to the list
+	//while (changed) {
+	//	// Prepare to break loop
+	//	changed = false;
+	//	// From the end of the list to the start
+	//	for (int i = maxI; i > 0; --i) {
+	//		// If later value is smaller than earlier value, swap values
+	//		if (angles[indices[i]] < angles[indices[i - 1]]) {
+	//			// Swap index values
+	//			int tempi = indices[i];
+	//			indices[i] = indices[i - 1];
+	//			indices[i - 1] = tempi;
+	//			// Stay in while loop, changes may still be needed
+	//			changed = true;
+	//		}
+	//	}
+	//}
+
+	// If true check next, if false check prev
+	bool checkNext = true;
+	// Edge index to access
+	int e = 0;
+	indices.push_back(e);
+	while (e < m_edges.size()) {
+		// The next edge pointer to find index for
+		TerrainEdge* other = nullptr;
+		// For each face look for the next/prev edge 
+		for (TerrainFace* f : m_faces) {
+			if (checkNext) {
+				// Save next edge pointer
+				other = f->GetNextEdge(m_edges[e], this);
+				// If edge found
+				if (other != nullptr) {
+					// Stop looking for a face that gives the next edge
+					break;
+				}
+			}
+			else {
+				// Save prev edge pointer
+				other = f->GetPrevEdge(m_edges[e], this);
+				// If edge found
+				if (other != nullptr) {
+					// Stop looking for a face that gives the prev edge
+					break;
+				}
+			}
+		}
+		// If no match was found forwards check backwards
+		if (other == nullptr) {
+			// If already going backwards then these faces/edges do not form a cycle
+			if (!checkNext) {
+				// Set vertex as being on the graph edge
+				m_graphEdge = true;
+				// Stop while looping
+				break;
+			}
+			// Reverse direction of checking
+			checkNext = false;
+			// Check from 0 again
+			e = 0;
+		}
+		// Else if an edge was found
+		else {
+			// Find the index of the edge pointer
+			for (int i = 0; i < m_edges.size(); ++i) {
+				// If this index matches the given edge
+				if (m_edges[i] == other) {
+					// Make this the next edge to find an edge from
+					e = i;
+					// If the next edge is index 0 a loop has been completed
+					if (e == 0) {
+						m_graphEdge = false;
+						e = m_edges.size();
+					}
+					// Add edge index to ordered indices list
+					else if (checkNext) {
+						indices.push_back(e);
+					}
+					else {
+						indices.push_front(e);
+					}
+					// Exit for loop, go back to while loop
+					break;
+				}
 			}
 		}
 	}
+
 	// Loop through ordered indices to rearrange edges
 	vector<TerrainEdge*> newEdges;
 	for (int i : indices) {
@@ -545,6 +618,17 @@ void TerrainEdge::SetPoints(TerrainVertex* v1, TerrainVertex* v2) {
 	CalculateGradient();
 }
 
+glm::vec3 TerrainEdge::GetDirection(TerrainVertex* root) {
+	// If start vertex is the first saved vertex return regular direction
+	if (root == m_points[0]) {
+		return m_normDir;
+	}
+	// Else return reversed direction
+	else {
+		return -m_normDir;
+	}
+}
+
 void TerrainEdge::SetType(EdgeType t) {
 	if (t > m_type) {
 		m_type = t;
@@ -606,7 +690,7 @@ void TerrainEdge::FlowDown(TerrainVertex* source) {
 TerrainFace::TerrainFace() {}
 TerrainFace::~TerrainFace() {}
 
-void TerrainFace::SetVerts(vector<TerrainVertex*> vs) { 
+void TerrainFace::SetVerts(vector<TerrainVertex*> vs) {
 	// Save vertex vector to face
 	m_verts = vs;
 	// Initialise max and min as coords of first vertex
@@ -627,6 +711,100 @@ void TerrainFace::SetVerts(vector<TerrainVertex*> vs) {
 			}
 		}
 	}
+}
+
+void TerrainFace::SetEdges(vector<TerrainEdge*> es) {
+	// Save vector of edges
+	m_edges = es;
+	// Get a vertex from an edge
+	TerrainVertex* root = m_edges.front()->GetPoint(0);
+	// Get edges associated with root
+	vector<TerrainEdge*> edges = AttachedEdges(root);
+	// Calculate normal
+	m_normal = glm::normalize(glm::cross(edges[0]->GetDirection(root), edges[1]->GetDirection(root)));
+	// Set gradient
+	m_grad = CalculateGradientHelp(m_normal);
+}
+
+bool TerrainFace::ContainsWaterfall(glm::vec3 origin) {
+	// Exit quickly if not between max and min
+
+	// Check if origin is too low to intersect
+	if (origin.y < m_min.y) {
+		return false;
+	}
+	// For x and z axis
+	for (int i = 0; i < 3; i += 2) {
+		//Check that origin falls between max and minimum locations
+		if (origin[i] < m_min[i] || origin[i] > m_max[i]) {
+			return false;
+		}
+	}
+
+	// Do intersection check with face and downward vector from origin
+	//
+	// UNFINISHED
+	//
+}
+
+std::vector<TerrainEdge*> TerrainFace::AttachedEdges(TerrainVertex* pivot) {
+	// Output vector
+	vector<TerrainEdge*> outEdges;
+	// Boolean to show order needs reversing
+	bool reverse = false;
+	// For each edge adjacent to face
+	for (int i = 0; i < m_edges.size(); ++i) {
+		TerrainEdge* thisE = m_edges[i];
+		// If either end of the edge is the sought after vertex
+		if (thisE->GetPoint(0) == pivot || thisE->GetPoint(1) == pivot) {
+			// If vector order needs to be reversed
+			if (reverse) {
+				// Put the first item at the second part of the list
+				outEdges.push_back(outEdges.front());
+				// Replace the first item with current edge
+				outEdges[0] = thisE;
+			}
+			else {
+				// Add the edge the output list
+				outEdges.push_back(thisE);
+			}
+		}
+		// If nothing is found and in the middle of the list
+		else if (i == 1) {
+			// Set flag for changing order to true
+			reverse = true;
+		}
+	}
+
+	return outEdges;
+}
+
+TerrainEdge* TerrainFace::GetNextEdge(TerrainEdge* first, TerrainVertex* pivot) {
+	// Output pointer 
+	TerrainEdge* outEdge = nullptr;
+	// Vector of relevant edges
+	vector<TerrainEdge*>  edges = AttachedEdges(pivot);
+	// If the first element is the given edge
+	if (edges[0] == first) {
+		// Make returned value the second edge
+		outEdge = edges[1];
+	}
+	// Returns nullptr if next edge cannot be found
+	return outEdge;
+}
+
+TerrainEdge* TerrainFace::GetPrevEdge(TerrainEdge* second, TerrainVertex* pivot) {
+	// Output pointer 
+	TerrainEdge* outEdge = nullptr;
+	// Vector of relevant edges
+	vector<TerrainEdge*>  edges = AttachedEdges(pivot);
+	// If the second element is the given edge
+	if (edges[1] == second) {
+		// Make returned value the first edge
+		outEdge = edges[0];
+	}
+	// Returns nullptr if prev edge cannot be found
+	return outEdge;
 }
 
 // TERRAIN WATERSHED ------------------------------------------------------------------
@@ -844,6 +1022,10 @@ void TerrainGraph::CreateGraph() {
 	// For each vertex index in the indexed model 
 	// Increment by three to step in triangles
 	for (int e = 0; e < obj.OBJIndices.size(); e += 3) {
+		// Vector of vertices for the face
+		vector<TerrainVertex*> faceVerts;
+		// Vector of edges for the face
+		vector<TerrainEdge*> faceEdges;
 		// For each of the three indexes in a triangle
 		for (int i = 0; i < 3; ++i) {
 			// pair of indices (either: 0/1, 1/2, 2/0)
@@ -861,15 +1043,31 @@ void TerrainGraph::CreateGraph() {
 				m_edges.push_back(te);
 				// Add pair of vertex indices to list
 				m_prevEdgePairs.push_back(pair<int, int>(index1, index2));
-				// Add pointer to list
+				// Add pointer to lists
 				m_prevEdges.push_back(te);
 			}
 			// Add edge to vertices (if it hasn't been added before)
 			if (m_verts[index1]->AddEdge(te)) {
 				m_verts[index2]->AddEdge(te);
 			}
-			/*	m_verts[index1]->AddEdge(te);
-				m_verts[index2]->AddEdge(te);*/
+			// Add edge to face regardless
+			faceEdges.push_back(te);
+			// Add vertex with index1 to face vertices
+			faceVerts.push_back(m_verts[index1]);
+		}
+		// Make a new terrainface
+		TerrainFace* tf = new TerrainFace();
+		// Add vertices
+		tf->SetVerts(faceVerts);
+		// Add edges
+		tf->SetEdges(faceEdges);
+		// Add face to vertices
+		for (TerrainVertex* v : faceVerts) {
+			v->AddFace(tf);
+		}
+		// Add face to edges
+		for (TerrainEdge* e : faceEdges) {
+			e->AddFace(tf);
 		}
 	}
 }

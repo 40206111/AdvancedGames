@@ -36,6 +36,7 @@ public:
 	// Add an edge to the vertex
 	// Returns false if edge was already added
 	bool AddEdge(TerrainEdge* e);
+	void AddFace(TerrainFace* f) { m_faces.push_back(f); }
 
 	// Find the shape of the vertex
 	void CalculateShape();
@@ -61,6 +62,7 @@ private:
 	glm::vec3 m_normal;
 	float m_gradient;
 	std::vector<TerrainEdge*> m_edges;
+	std::vector<TerrainFace*> m_faces;
 	TerrainShape m_shape;
 	std::vector<std::vector<TerrainEdge*>> m_groups;
 	std::vector<TerrainEdge*> m_steepestUp;
@@ -73,6 +75,7 @@ private:
 	bool m_flowEnd;
 	bool m_bridge;
 	WaterType m_water;
+	bool m_graphEdge;
 };
 
 class TerrainEdge {
@@ -84,9 +87,12 @@ public:
 	float GetGradient(TerrainVertex* root);
 	TerrainVertex* GetPoint(int p) { return m_points[p]; }
 	TerrainVertex* GetOtherPoint(TerrainVertex* tv);
+	// Return normalised edge direction starting from root
+	glm::vec3 GetDirection(TerrainVertex* root);
 
 	void SetPoints(TerrainVertex* v1, TerrainVertex* v2);
 	void SetType(EdgeType t);
+	void AddFace(TerrainFace* f) { m_faces.push_back(f); }
 
 	// Return the angle in radians between a given vector and this edge (from the given root node)
 	// Ignores the y axis
@@ -99,6 +105,7 @@ private:
 	void CalculateGradient();
 
 	TerrainVertex* m_points[2]{ nullptr, nullptr };
+	std::vector<TerrainFace*> m_faces;
 	float m_gradient;
 	EdgeType m_type;
 	glm::vec3 m_normDir;
@@ -113,15 +120,18 @@ public:
 	glm::vec3 GetNormal() { return m_normal; }
 
 	void SetVerts(vector<TerrainVertex*> vs);
-	void SetEdges(vector<TerrainEdge*> es) { m_edges = es; }
+	void SetEdges(vector<TerrainEdge*> es);
 
-	bool ContainsRay();
+	bool ContainsWaterfall(glm::vec3 origin);
 	// Return edges attached to a vertex in anti-clockwise order
 	std::vector<TerrainEdge*> AttachedEdges(TerrainVertex* pivot);
 	// Return anti-clockwise edge.  Returns nullptr if given the anti-clockwise edge.
 	TerrainEdge* GetNextEdge(TerrainEdge* first, TerrainVertex* pivot);
+	// Return clockwise edge.  Returns nullptr if given the clockwise edge.
+	TerrainEdge* GetPrevEdge(TerrainEdge* second, TerrainVertex* pivot);
 
 private:
+	float m_grad;
 	std::vector<TerrainVertex*> m_verts;
 	std::vector<TerrainEdge*> m_edges;
 	glm::vec3 m_normal;
