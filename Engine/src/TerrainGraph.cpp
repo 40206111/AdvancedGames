@@ -277,34 +277,7 @@ bool TerrainVertex::CalculateFlow() {
 }
 
 void TerrainVertex::OrderEdges() {
-	//vector<float> angles; OLD
 	deque<int> indices;
-	//// For each edge get the angle from x axis to it
-	//for (int i = 0; i < m_edges.size(); ++i) {
-	//	// Add to angle vector
-	//	angles.push_back((m_edges[i]->GetXZRotatation(this, glm::vec3(1.0f, 0.0f, 0.0f))));
-	//	// Add to index vector
-	//	indices.push_back(i);
-	//}
-	//bool changed = true;
-	//int maxI = angles.size() - 1;
-	//// While changes are made to the list
-	//while (changed) {
-	//	// Prepare to break loop
-	//	changed = false;
-	//	// From the end of the list to the start
-	//	for (int i = maxI; i > 0; --i) {
-	//		// If later value is smaller than earlier value, swap values
-	//		if (angles[indices[i]] < angles[indices[i - 1]]) {
-	//			// Swap index values
-	//			int tempi = indices[i];
-	//			indices[i] = indices[i - 1];
-	//			indices[i - 1] = tempi;
-	//			// Stay in while loop, changes may still be needed
-	//			changed = true;
-	//		}
-	//	}
-	//}
 
 	// If true check next, if false check prev
 	bool checkNext = true;
