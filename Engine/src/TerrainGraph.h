@@ -27,6 +27,7 @@ public:
 	bool IsFlowEnd() { return m_flowEnd; }
 	bool IsBridge() { return m_bridge; }
 	WaterType GetWaterType() { return m_water; }
+	bool IsGraphEdge() { return m_graphEdge; }
 
 	void SetPos(glm::vec3 p) { m_pos = p; }
 	void SetFlowGroup(int id) { m_waterShedID = id; }

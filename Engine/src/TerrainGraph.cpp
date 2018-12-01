@@ -439,14 +439,22 @@ void TerrainVertex::MakeFlowGroup(vector<TerrainVertex*> &visited, int id) {
 bool TerrainVertex::CalculateFlowEdge() {
 	// Initialise flow edge to false
 	m_flowEdge = false;
+	// If a graph edge avoid terrainedge checks
+	if (m_graphEdge) {
+		// Set as edge of flow group
+		m_flowEdge = true;
+	}
+	// Else if not a graph edge determine if edge through checking terrain edges
+	else{
 	// For each edge
-	for (TerrainEdge* te : m_edges) {
-		// If the edge leads to a vertex in a different watershed-group
-		if (te->GetOtherPoint(this)->GetFlowGroup() != m_waterShedID) {
-			// Set this vertex as a border of its group
-			m_flowEdge = true;
-			// Exit function (further testing unneccessary)
-			break;
+		for (TerrainEdge* te : m_edges) {
+			// If the edge leads to a vertex in a different watershed-group
+			if (te->GetOtherPoint(this)->GetFlowGroup() != m_waterShedID) {
+				// Set this vertex as a border of its group
+				m_flowEdge = true;
+				// Exit function (further testing unneccessary)
+				break;
+			}
 		}
 	}
 	return m_flowEdge;
@@ -897,7 +905,7 @@ std::vector<TerrainVertex*> TerrainWaterShed::FindBridges() {
 	m_bridges.clear();
 	// Return list of bridges in other groups
 	vector<TerrainVertex*> lowOthers;
-	// If no edges exist
+	// If no edges exist in this watershed, return early
 	if (m_edges.size() == 0) {
 		return lowOthers;
 	}
@@ -911,13 +919,17 @@ std::vector<TerrainVertex*> TerrainWaterShed::FindBridges() {
 	for (TerrainVertex* v : m_edges) {
 		// If edge vertex is lower than other vertices
 		if (firstBridge || v->GetPos().y < lowest) {
-			// Get edges v has
-			vector<TerrainEdge*> vEdges = v->GetEdges();
 			// Tracking for the other vertex
 			float otherLowest;
-			TerrainVertex* otherLowV;
+			TerrainVertex* otherLowV = nullptr;
+			// If this vertex is a graph edge, initialise otherLowest to its height
+			if (v->IsGraphEdge()) {
+				otherLowest = v->GetPos().y;
+			}
 			// The first vertex to be found from a different group
 			bool firstOther = true;
+			// Get edges v has
+			vector<TerrainEdge*> vEdges = v->GetEdges();
 			// For each edge
 			for (TerrainEdge* e : vEdges) {
 				// Other vertex
@@ -946,7 +958,10 @@ std::vector<TerrainVertex*> TerrainWaterShed::FindBridges() {
 				lowV = v;
 				// Save other side of bridge
 				lowOthers.clear();
-				lowOthers.push_back(otherLowV);
+				// If there is a vertex pointer to push back
+				if (otherLowV != nullptr) {
+					lowOthers.push_back(otherLowV);
+				}
 				// Cancel first bridge
 				firstBridge = false;
 			}
