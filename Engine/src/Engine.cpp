@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
 	cout << "Pre-analysis" << endl;
 	graph.AnalyseGraph();
 	cout << "Pre-colouring" << endl;
-	graph.ColourWaterEdges();
+	graph.ColourWaterVals();
 	cout << "Graph done" << endl;
 
 	// load texture
@@ -141,6 +141,10 @@ int main(int argc, char *argv[])
 		}
 		if (bHeld && glfwGetKey(app.getWindow(), GLFW_KEY_B) == GLFW_RELEASE) {
 			bHeld = false;
+		}
+		if (glfwGetKey(app.getWindow(), GLFW_KEY_N) == GLFW_PRESS) {
+			graph.ColourWaterVals();
+			bHeld = true;
 		}
 
 		float rotSpeed = 0.002f;

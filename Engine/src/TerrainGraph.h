@@ -13,6 +13,8 @@ class TerrainFace;
 
 class TerrainVertex {
 public:
+	static float GreatestWaterVal;
+
 	TerrainVertex();
 	~TerrainVertex();
 
@@ -28,6 +30,7 @@ public:
 	bool IsBridge() { return m_bridge; }
 	WaterType GetWaterType() { return m_water; }
 	bool IsGraphEdge() { return m_graphEdge; }
+	float GetWaterVal() { return m_waterVal; }
 
 	void SetPos(glm::vec3 p) { m_pos = p; }
 	void SetFlowGroup(int id) { m_waterShedID = id; }
@@ -44,12 +47,13 @@ public:
 	// Find the vertices this vertex flows to
 	// Returns false if this vertex does not flow
 	bool CalculateFlow();
-	void MakeFlowGroup(std::vector<TerrainVertex*> &visited, int id);
+	float MakeFlowGroup(std::vector<TerrainVertex*> &visited, int id);
 	bool CalculateFlowEdge();
 	void MakeBridge();
 	void FollowSteepUp(std::vector<TerrainVertex*> &visited, int id);
 
 	void AddFlowSource(TerrainVertex* source);
+	void AddWater(float water);
 
 private:
 	// Calculate gradient of vertex normal
@@ -77,6 +81,7 @@ private:
 	bool m_bridge;
 	WaterType m_water;
 	bool m_graphEdge;
+	float m_waterVal;
 };
 
 class TerrainEdge {
@@ -86,10 +91,13 @@ public:
 
 	EdgeType GetType() { return m_type; }
 	float GetGradient(TerrainVertex* root);
+	float GetAbsGradient() { return m_gradient; }
 	TerrainVertex* GetPoint(int p) { return m_points[p]; }
 	TerrainVertex* GetOtherPoint(TerrainVertex* tv);
 	// Return normalised edge direction starting from root
 	glm::vec3 GetDirection(TerrainVertex* root);
+	float GetLength() { return m_length; }
+	float GetFlatLength() { return m_flatLength; }
 
 	void SetPoints(TerrainVertex* v1, TerrainVertex* v2);
 	void SetType(EdgeType t);
@@ -108,6 +116,8 @@ private:
 	TerrainVertex* m_points[2]{ nullptr, nullptr };
 	std::vector<TerrainFace*> m_faces;
 	float m_gradient;
+	float m_length;
+	float m_flatLength;
 	EdgeType m_type;
 	glm::vec3 m_normDir;
 	glm::vec3 m_normDirFlat;
@@ -132,7 +142,11 @@ public:
 	TerrainEdge* GetPrevEdge(TerrainEdge* second, TerrainVertex* pivot);
 
 private:
+	// Split face area to vertices that make it
+	void DistributeWater();
+
 	float m_grad;
+	float m_area;
 	std::vector<TerrainVertex*> m_verts;
 	std::vector<TerrainEdge*> m_edges;
 	glm::vec3 m_normal;
@@ -149,8 +163,12 @@ public:
 
 	// Get the ID of this watershed group
 	int GetID() { return m_id; }
+	// Get the volume of water leaving this area
+	float GetWaterVal() { return m_lowestFlowless->GetWaterVal(); }
 	// Set ID for this group and all stored vertices
 	void SetID(int id);
+	// Set the flowless vertex
+	void SetFlowless(TerrainVertex* v) { m_lowestFlowless = v; }
 	// Adds a list of vertices to this watershed group
 	void AddMembers(std::vector<TerrainVertex*> newMembers);
 	// Add a bridge into this group, from another group
@@ -168,6 +186,7 @@ private:
 	bool m_complete;
 	int m_id;
 	float m_exitHeight;
+	TerrainVertex* m_lowestFlowless;
 	std::vector<TerrainVertex*> m_bridges;
 	std::vector<TerrainVertex*> m_edges;
 	std::vector<TerrainVertex*> m_members;
@@ -187,8 +206,11 @@ public:
 	void ColourWaterBodies();
 	void ColourShapeResults();
 	void ColourGradients();
+	void ColourWaterVals();
 
 private:
+	void SendColours();
+
 	PolyMesh* m_pm;
 	std::vector<TerrainVertex*> m_verts;
 	std::vector<TerrainEdge*> m_edges;
