@@ -14,6 +14,9 @@ class TerrainFace;
 class TerrainVertex {
 public:
 	static float GreatestWaterVal;
+	static float RiverThreshold;
+	static float RiverSpreadThreshold;
+	static int ID;
 
 	TerrainVertex();
 	~TerrainVertex();
@@ -54,6 +57,7 @@ public:
 
 	void AddFlowSource(TerrainVertex* source);
 	void AddWater(float water);
+	void AddFlowingWater(float water);
 
 private:
 	// Calculate gradient of vertex normal
@@ -63,6 +67,7 @@ private:
 	// Are edges order by rotation
 	bool m_ordered;
 
+	int m_id;
 	glm::vec3 m_pos;
 	glm::vec3 m_normal;
 	float m_gradient;
@@ -82,6 +87,9 @@ private:
 	WaterType m_water;
 	bool m_graphEdge;
 	float m_waterVal;
+	float m_waterRemaining;
+	std::vector<int> m_flatestEdges;
+	std::vector<int> m_lowestGradients;
 };
 
 class TerrainEdge {
@@ -140,10 +148,10 @@ public:
 	TerrainEdge* GetNextEdge(TerrainEdge* first, TerrainVertex* pivot);
 	// Return clockwise edge.  Returns nullptr if given the clockwise edge.
 	TerrainEdge* GetPrevEdge(TerrainEdge* second, TerrainVertex* pivot);
-
-private:
 	// Split face area to vertices that make it
 	void DistributeWater();
+
+private:
 
 	float m_grad;
 	float m_area;
@@ -214,6 +222,7 @@ private:
 	PolyMesh* m_pm;
 	std::vector<TerrainVertex*> m_verts;
 	std::vector<TerrainEdge*> m_edges;
+	std::vector<TerrainFace*> m_faces;
 	std::vector<glm::vec4> m_uniqueColours;
 	std::vector<glm::vec4> m_nonUniqueColours;
 

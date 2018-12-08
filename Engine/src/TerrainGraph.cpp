@@ -39,6 +39,9 @@ float CalculateGradientHelp(glm::vec3 diff) {
 // TERRAIN VERTEX -------------------------------------------------------------------------
 
 float TerrainVertex::GreatestWaterVal = 0.0f;
+float TerrainVertex::RiverThreshold = 300.0f;
+float TerrainVertex::RiverSpreadThreshold = 350.0f;
+int TerrainVertex::ID = 0;
 
 TerrainVertex::TerrainVertex() {
 	m_ordered = false;
@@ -54,6 +57,8 @@ TerrainVertex::TerrainVertex() {
 	m_water = NONE;
 	m_graphEdge = false;
 	m_waterVal = 0.0f;
+	m_waterRemaining = 0.0f;
+	m_id = ID++;
 }
 TerrainVertex::~TerrainVertex() {}
 
@@ -357,6 +362,55 @@ void TerrainVertex::OrderEdges() {
 	for (int i : indices) {
 		newEdges.push_back(m_edges[i]);
 	}
+
+	// Go through ordered edges to make order index list from flatest to steepest
+
+	// Populate index vector
+	for (int i = 0; i < m_edges.size(); ++i) {
+		m_flatestEdges.push_back(i);
+	}
+	// Swap indices of edges based on gradient
+	bool swapped = true;
+	while (swapped) {
+		swapped = false;
+		// For each edge
+		for (int i = 1; i < m_edges.size(); ++i) {
+			// If later item is smaller than earlier item
+			if (m_edges[m_flatestEdges[i]]->GetAbsGradient() < m_edges[m_flatestEdges[i - 1]]->GetAbsGradient()) {
+				// Swap indices
+				int temp = m_flatestEdges[i];
+				m_flatestEdges[i] = m_flatestEdges[i - 1];
+				m_flatestEdges[i - 1] = temp;
+				// Set boolean
+				swapped = true;
+			}
+		}
+	}
+
+	// Order gradients by lowest to highest
+
+	// Populate index vector
+	for (int i = 0; i < m_edges.size(); ++i) {
+		m_lowestGradients.push_back(i);
+	}
+	// Swap indices of edges based on gradient
+	swapped = true;
+	while (swapped) {
+		swapped = false;
+		// For each edge
+		for (int i = 1; i < m_edges.size(); ++i) {
+			// If later item is smaller than earlier item
+			if (m_edges[m_lowestGradients[i]]->GetGradient(this) < m_edges[m_lowestGradients[i - 1]]->GetGradient(this)) {
+				// Swap indices
+				int temp = m_lowestGradients[i];
+				m_lowestGradients[i] = m_lowestGradients[i - 1];
+				m_lowestGradients[i - 1] = temp;
+				// Set boolean
+				swapped = true;
+			}
+		}
+	}
+
 	// Assign new ordered edge list
 	m_edges = newEdges;
 	// Set ordered boolean
@@ -536,75 +590,68 @@ bool TerrainVertex::AddEdge(TerrainEdge* edge) {
 }
 
 void TerrainVertex::AddWater(float water) {
-	// limit values
-	float riverStart = 50.0f;
-	float riverSpread = 10.0f;
-
 	// Add incoming water to current value
 	m_waterVal += water;
+	m_waterRemaining += water;
 	// Make a river if enough water
-	if (m_waterVal > riverStart) {
+	if (m_waterVal > RiverThreshold) {
 		SetWaterType(RIVER);
 	}
 
 	// AVOID FUTURE FOR NOW 
 	return;
 
+}
+
+void TerrainVertex::AddFlowingWater(float water) {
+	float passOn = water;
+	// Add incoming water to current value
+	m_waterVal += water;
+	m_waterRemaining += water;
+	// Make a river if enough water
+	if (m_waterVal > RiverThreshold) {
+		SetWaterType(RIVER);
+	}
+
 	// If a vertex is available to send water to
 	if (m_flowTo != nullptr) {
 		// Check water quantity
-		if (m_waterVal > riverSpread) {
+		if (m_waterRemaining > RiverSpreadThreshold) {
 			// Distribute to most horizontal/not-river
-			vector<int> indices;
-			for (int i = 0; i < m_edges.size(); ++i) {
-				indices.push_back(i);
-			}
-			// Swap indices of edges based on gradient
-			bool swapped = true;
-			while (swapped) {
-				swapped = false;
-				// For each edge
-				for (int i = 1; i < m_edges.size(); ++i) {
-					// If later item is smaller than earlier item
-					if (m_edges[indices[i]]->GetAbsGradient() < m_edges[indices[i - 1]]->GetAbsGradient()) {
-						// Swap indices
-						int temp = indices[i];
-						indices[i] = indices[i - 1];
-						indices[i - 1] = temp;
-						// Set boolean
-						swapped = true;
-					}
-				}
-			}
+
 			// True if excess water was moved to another vertex
 			bool waterMoved = false;
 			// Go through indices for edges
-			for (int i = 0; i < indices.size(); ++i) {
+			for (int i = 0; i < m_lowestGradients.size(); ++i) {
 				// If the other vertex is not already a river
-				if (m_edges[indices[i]]->GetOtherPoint(this)->GetWaterType() == NONE) {
+				if (m_edges[m_lowestGradients[i]]->GetOtherPoint(this)->GetWaterType() == NONE) {
 					// Volume to move to next vertex
-					float outVal = m_waterVal;
+					float outVal = m_waterRemaining;
 					// While volume moved would cause river to split again 
-					while (outVal > riverSpread) {
+					while (outVal > RiverSpreadThreshold) {
 						// Reduce volume moved
-						outVal -= riverSpread;
+						outVal -= RiverSpreadThreshold;
 					}
 					// Add the water to adjacent, non-water vertex
-					m_edges[indices[i]]->GetOtherPoint(this)->AddWater(outVal);
+					m_edges[m_lowestGradients[i]]->GetOtherPoint(this)->AddFlowingWater(outVal);
 					// Update own water value
-					m_waterVal -= outVal;
+					m_waterRemaining -= outVal;
+					// Update pass on value 
+					passOn -= outVal;
 					// Update boolean
 					waterMoved = true;
+					// Break if more spreading can't happen
+					if (!(m_waterRemaining > RiverSpreadThreshold))
+					{
+						break;
+					}
 				}
 			}
-			// If the water was not successfully moved
-			if (!waterMoved) {
-				// Flow the excess to the steepest river vertex
-				m_flowTo->AddWater(m_waterVal - riverSpread);
-				// Make own volume just below spreading
-				m_waterVal = riverSpread;
-			}
 		}
+	}
+	// Give passOn value to next vertex in river
+	if (m_flowTo != nullptr) {
+		m_flowTo->AddFlowingWater(passOn);
 	}
 }
 
@@ -776,10 +823,6 @@ void TerrainFace::SetVerts(vector<TerrainVertex*> vs) {
 			}
 		}
 	}
-	// If edges have been added
-	if (m_edges.size() > 0) {
-		DistributeWater();
-	}
 }
 
 void TerrainFace::SetEdges(vector<TerrainEdge*> es) {
@@ -804,10 +847,6 @@ void TerrainFace::SetEdges(vector<TerrainEdge*> es) {
 			float s = (a + b + c) / 2.0f;
 			m_area = sqrtf(s * (s - a) * (s - b) * (s - c));
 		}
-	}
-	// If vertices have been added
-	if (m_verts.size() > 0) {
-		DistributeWater();
 	}
 }
 
@@ -911,7 +950,7 @@ void TerrainFace::DistributeWater() {
 	}
 	// Send water to vertices
 	for (TerrainVertex* v : lowVs) {
-		v->AddWater(m_area / lowVs.size());
+		v->AddFlowingWater(m_area / lowVs.size());
 	}
 }
 
@@ -1083,7 +1122,7 @@ void TerrainWaterShed::MakeLakes() {
 	for (TerrainVertex* v : m_members) {
 		// If below the height of water exit
 		if (v->GetPos().y <= m_exitHeight) {
-			v->SetWaterType(LAKE);
+			//v->SetWaterType(LAKE);
 			// If this vertex is on the graph edge this region is complete
 			if (v->IsGraphEdge()) {
 				m_complete = true;
@@ -1181,6 +1220,8 @@ void TerrainGraph::CreateGraph() {
 		}
 		// Make a new terrainface
 		TerrainFace* tf = new TerrainFace();
+		// Add it to list
+		m_faces.push_back(tf);
 		// Add vertices
 		tf->SetVerts(faceVerts);
 		// Add edges
@@ -1205,6 +1246,9 @@ void TerrainGraph::AnalyseGraph() {
 		if (!v->CalculateFlow()) {
 			m_flowless.push_back(v);
 		}
+	}
+	for (TerrainFace* f : m_faces) {
+		f->DistributeWater();
 	}
 	// Watershed ID
 	int i = 0;
@@ -1468,7 +1512,7 @@ void TerrainGraph::ColourWaterVals() {
 	for (TerrainVertex* v : m_verts) {
 		float frac = v->GetWaterVal() / TerrainVertex::GreatestWaterVal;
 		// Add colour gradient from green(low) to red(high)
-		m_uniqueColours.push_back(glm::vec4(colMin + frac * colAdd, colMin + (1.0f - frac) * colAdd, 0.3f, 1.0f));
+		m_uniqueColours.push_back(glm::vec4(colMin + sin(frac * M_PI_2) * colAdd, colMin + (1.0f - sin(frac * M_PI_2)) * colAdd, 0.3f, 1.0f));
 	}
 	SendColours();
 }
