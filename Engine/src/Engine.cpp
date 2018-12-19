@@ -42,11 +42,13 @@ int main(int argc, char *argv[])
 	//detail cliff tris.obj
 	//coral_hard_02.obj
 	//stabbs-8k.obj
+	// mesh1-30k-tris.obj
+	// mesh1-130k-tris.obj
 	// bumps.obj
 	// maybe saddle.obj
 	// peak.obj
 	// valley.obj
-	PolyMesh mesh = PolyMesh::PolyMesh("./resources/models/stabbs-8k.obj");
+	PolyMesh mesh = PolyMesh::PolyMesh("./resources/models/mesh1-30k-tris.obj");
 	mesh.rotate(-3.0f * 3.1415f / 4.0f, glm::vec3(0.0f, 1.0f, 0.0f));
 	// material
 	Phong phong = Phong::Phong(glm::vec3(.2f, .2f, .2f), glm::vec3(.5f, .2f, .2f), glm::vec3(.2f, .2f, .2f), 12);
@@ -134,17 +136,14 @@ int main(int argc, char *argv[])
 		if (xHeld && glfwGetKey(app.getWindow(), GLFW_KEY_X) == GLFW_RELEASE) {
 			xHeld = false;
 		}
-		static bool bHeld = false;
-		if (!bHeld && glfwGetKey(app.getWindow(), GLFW_KEY_B) == GLFW_PRESS) {
+		if (glfwGetKey(app.getWindow(), GLFW_KEY_B) == GLFW_PRESS) {
 			graph.ColourWaterBodies();
-			bHeld = true;
 		}
-		if (bHeld && glfwGetKey(app.getWindow(), GLFW_KEY_B) == GLFW_RELEASE) {
-			bHeld = false;
+		if (glfwGetKey(app.getWindow(), GLFW_KEY_G) == GLFW_PRESS) {
+			graph.ColourRainfallBodies();
 		}
 		if (glfwGetKey(app.getWindow(), GLFW_KEY_N) == GLFW_PRESS) {
 			graph.ColourWaterVals();
-			bHeld = true;
 		}
 
 		float rotSpeed = 0.002f;

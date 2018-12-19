@@ -1,12 +1,14 @@
 #pragma once
 #include <glm/glm.hpp>
 #include <vector>
+#include <map>
 #include "OBJLoader.h"
 #include "PolyMesh.h"
 
 enum TerrainShape { DEFAULT_V, PEAK, PIT, RIDGE_V, TROUGH_V, HILLTOP, HILLBASE, SLOPE, FLAT, SADDLE };
 enum EdgeType { DEFAULT_E, RIDGE_E, TROUGH_E, WATERSHED };
 enum WaterType { NONE, RIVER, LAKE };
+enum RainfallType { RF_NONE, RF_RIVER, RF_FASTRIVER, RF_LAKE };
 
 class TerrainEdge;
 class TerrainFace;
@@ -31,13 +33,16 @@ public:
 	bool IsFlowEdge() { return m_flowEdge; }
 	bool IsFlowEnd() { return m_flowEnd; }
 	bool IsBridge() { return m_bridge; }
+	TerrainVertex* GetBridgeEnd() { return m_bridgeTo; }
 	WaterType GetWaterType() { return m_water; }
 	bool IsGraphEdge() { return m_graphEdge; }
 	float GetWaterVal() { return m_waterVal; }
+	RainfallType GetRainType() { return m_rainType; }
 
 	void SetPos(glm::vec3 p) { m_pos = p; }
 	void SetFlowGroup(int id) { m_waterShedID = id; }
 	void SetAsBridge() { m_bridge = true; }
+	void AddBridgeSource(TerrainVertex* from) { m_bridgeSources.push_back(from); }
 	void SetWaterType(WaterType w);
 	void AddNormal(glm::vec3 n) { m_normal += n; }
 	// Add an edge to the vertex
@@ -84,12 +89,15 @@ private:
 	bool m_flowEdge;
 	bool m_flowEnd;
 	bool m_bridge;
+	std::vector<TerrainVertex*> m_bridgeSources;
+	TerrainVertex* m_bridgeTo;
 	WaterType m_water;
 	bool m_graphEdge;
 	float m_waterVal;
 	float m_waterRemaining;
 	std::vector<int> m_flatestEdges;
 	std::vector<int> m_lowestGradients;
+	RainfallType m_rainType;
 };
 
 class TerrainEdge {
@@ -173,6 +181,8 @@ public:
 	int GetID() { return m_id; }
 	// Get the volume of water leaving this area
 	float GetWaterVal() { return m_lowestFlowless->GetWaterVal(); }
+	// Number of other regions to bridge into this section
+	int GetOtherBridges() { return m_otherBridges; }
 	// Set ID for this group and all stored vertices
 	void SetID(int id);
 	// Set the flowless vertex
@@ -187,6 +197,8 @@ public:
 	void MakeLakes();
 	// True if the watershed leaves the graph region
 	bool IsComplete() { return m_complete; }
+	// Recieve overflow
+	void SendBridgeWater(TerrainVertex* bridge, float water);
 	// Moves this regions details into the given region
 	void MergeInto(TerrainWaterShed* ws);
 
@@ -195,7 +207,8 @@ private:
 	int m_id;
 	float m_exitHeight;
 	TerrainVertex* m_lowestFlowless;
-	std::vector<TerrainVertex*> m_bridges;
+	std::vector<TerrainVertex*> m_thisBridges;
+	int m_otherBridges;
 	std::vector<TerrainVertex*> m_edges;
 	std::vector<TerrainVertex*> m_members;
 };
@@ -212,6 +225,7 @@ public:
 	void ColourWaterGroup();
 	void ColourWaterEdges();
 	void ColourWaterBodies();
+	void ColourRainfallBodies();
 	void ColourShapeResults();
 	void ColourGradients();
 	void ColourWaterVals();

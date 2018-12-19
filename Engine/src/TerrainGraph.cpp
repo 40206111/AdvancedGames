@@ -59,6 +59,8 @@ TerrainVertex::TerrainVertex() {
 	m_waterVal = 0.0f;
 	m_waterRemaining = 0.0f;
 	m_id = ID++;
+	m_rainType = RF_NONE;
+	m_bridgeTo = nullptr;
 }
 TerrainVertex::~TerrainVertex() {}
 
@@ -516,12 +518,10 @@ void TerrainVertex::MakeBridge() {
 	}
 	// If a bridge vertex was found
 	if (bridge != nullptr) {
-		// Swap group id's
-		/*int myID = m_waterShedID;
-		m_waterShedID = bridge->GetOtherPoint(this)->GetFlowGroup();
-		bridge->GetOtherPoint(this)->SetFlowGroup(myID);*/
 		bridge->GetOtherPoint(this)->SetAsBridge();
-		SetAsBridge();
+		bridge->GetOtherPoint(this)->AddBridgeSource(this);
+		m_bridge = true;
+		m_bridgeTo = bridge->GetOtherPoint(this);
 	}
 }
 
@@ -595,7 +595,7 @@ void TerrainVertex::AddWater(float water) {
 	m_waterRemaining += water;
 	// Make a river if enough water
 	if (m_waterVal > RiverThreshold) {
-		SetWaterType(RIVER);
+		m_rainType = RF_RIVER;
 	}
 
 	// AVOID FUTURE FOR NOW 
@@ -608,10 +608,6 @@ void TerrainVertex::AddFlowingWater(float water) {
 	// Add incoming water to current value
 	m_waterVal += water;
 	m_waterRemaining += water;
-	// Make a river if enough water
-	if (m_waterVal > RiverThreshold) {
-		SetWaterType(RIVER);
-	}
 
 	// If a vertex is available to send water to
 	if (m_flowTo != nullptr) {
@@ -652,6 +648,13 @@ void TerrainVertex::AddFlowingWater(float water) {
 	// Give passOn value to next vertex in river
 	if (m_flowTo != nullptr) {
 		m_flowTo->AddFlowingWater(passOn);
+	}
+	// Designate this vertex water type
+	if (m_waterRemaining > RiverSpreadThreshold) {
+		m_rainType = RF_FASTRIVER;
+	}
+	else if (m_waterVal > RiverThreshold) {
+		SetWaterType(RIVER);
 	}
 }
 
@@ -959,6 +962,7 @@ void TerrainFace::DistributeWater() {
 TerrainWaterShed::TerrainWaterShed() {
 	m_id = -1;
 	m_complete = false;
+	m_otherBridges = 0;
 }
 
 TerrainWaterShed::~TerrainWaterShed() {}
@@ -1007,23 +1011,25 @@ void TerrainWaterShed::AddMembers(vector<TerrainVertex*> newMembers) {
 }
 
 void TerrainWaterShed::AddBridge(TerrainVertex* in) {
-	// Vertex is already a bridge
-	bool isHere = false;
-	// For each bridge
-	for (TerrainVertex* v : m_bridges) {
-		// If the in vertex is already a bridge
-		if (in == v) {
-			isHere = true;
-			break;
-		}
-	}
-	// If in is not here already
-	if (!isHere) {
-		// Add in to bridges
-		m_bridges.push_back(in);
-		// Tell vertex it's a bridge
-		in->SetAsBridge();
-	}
+	// Increase other bridge count
+	m_otherBridges++;
+	//// Vertex is already a bridge
+	//bool isHere = false;
+	//// For each bridge
+	//for (TerrainVertex* v : m_thisBridges) {
+	//	// If the in vertex is already a bridge
+	//	if (in == v) {
+	//		isHere = true;
+	//		break;
+	//	}
+	//}
+	//// If in is not here already
+	//if (!isHere) {
+	//	// Add in to bridges
+	//	m_thisBridges.push_back(in);
+	//	// Tell vertex it's a bridge
+	//	in->SetAsBridge();
+	//}
 	// Vertex to flow to
 	TerrainVertex* next = in;
 	// While there's vertices to flow to
@@ -1033,7 +1039,7 @@ void TerrainWaterShed::AddBridge(TerrainVertex* in) {
 			break;
 		}
 		// Set vertex as a river
-		//next->SetWaterType(RIVER);
+		next->SetWaterType(RIVER);
 		// Set next as the next vertex in the steepest path
 		next = next->GetFlowTo();
 	}
@@ -1041,7 +1047,7 @@ void TerrainWaterShed::AddBridge(TerrainVertex* in) {
 
 std::vector<TerrainVertex*> TerrainWaterShed::FindBridges() {
 	// Empty list of bridges
-	m_bridges.clear();
+	m_thisBridges.clear();
 	// Return list of bridges in other groups
 	vector<TerrainVertex*> lowOthers;
 	// If no edges exist in this watershed, return early
@@ -1109,8 +1115,8 @@ std::vector<TerrainVertex*> TerrainWaterShed::FindBridges() {
 	// If a vertex has been found
 	if (lowV != nullptr) {
 		// Save bridge details
-		lowV->SetAsBridge();
-		m_bridges.push_back(lowV);
+		lowV->MakeBridge();
+		m_thisBridges.push_back(lowV);
 		m_exitHeight = lowest;
 	}
 	// Return bridge vertices in other watersheds
@@ -1122,7 +1128,7 @@ void TerrainWaterShed::MakeLakes() {
 	for (TerrainVertex* v : m_members) {
 		// If below the height of water exit
 		if (v->GetPos().y <= m_exitHeight) {
-			//v->SetWaterType(LAKE);
+			v->SetWaterType(LAKE);
 			// If this vertex is on the graph edge this region is complete
 			if (v->IsGraphEdge()) {
 				m_complete = true;
@@ -1131,7 +1137,18 @@ void TerrainWaterShed::MakeLakes() {
 	}
 }
 
+void TerrainWaterShed::SendBridgeWater(TerrainVertex* bridge, float water) {
+	// Add the water to the bridge
+	bridge->AddFlowingWater(water);
+	// Decrement bridge count
+	m_otherBridges--;
+}
+
 void TerrainWaterShed::MergeInto(TerrainWaterShed* ws) {
+	// Send all bridges equal water
+	for (TerrainVertex* b : m_thisBridges) {
+		//ws->SendBridgeWater(b, m_lowestFlowless->GetWaterVal() / (float) m_thisBridges.size());
+	}
 	// Give other group the vertices from this one
 	ws->AddMembers(m_members);
 }
@@ -1427,6 +1444,26 @@ void TerrainGraph::ColourWaterBodies() {
 			m_uniqueColours.push_back(glm::vec4(0.3f, 0.3f, 0.6f, 1.0f)); // Dark blue
 			break;
 		case(RIVER):
+			m_uniqueColours.push_back(glm::vec4(0.5f, 0.5f, 1.0f, 1.0f)); // Light blue
+			break;
+		default:
+			m_uniqueColours.push_back(glm::vec4(0.3f, 0.3f, 0.3f, 1.0f)); // Grey
+			break;
+		}
+	}
+	SendColours();
+}
+
+void TerrainGraph::ColourRainfallBodies() {
+	m_uniqueColours.clear();
+	m_nonUniqueColours.clear();
+	// For all vertices
+	for (TerrainVertex* v : m_verts) {
+		switch (v->GetRainType()) {
+		case(RF_FASTRIVER):
+			m_uniqueColours.push_back(glm::vec4(0.3f, 0.3f, 0.6f, 1.0f)); // Dark blue
+			break;
+		case(RF_RIVER):
 			m_uniqueColours.push_back(glm::vec4(0.5f, 0.5f, 1.0f, 1.0f)); // Light blue
 			break;
 		default:
