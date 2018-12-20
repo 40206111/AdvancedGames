@@ -48,7 +48,37 @@ int main(int argc, char *argv[])
 	// maybe saddle.obj
 	// peak.obj
 	// valley.obj
-	PolyMesh mesh = PolyMesh::PolyMesh("./resources/models/stabbs-8k.obj");
+	// terrain2b.obj
+	// terrain3a.obj
+	string source = "./resources/models/stabbs-8k.obj";
+	float scale = 0.1f;
+	int doTerrain = 2;
+	switch (doTerrain)
+	{
+	case (0):
+		source = "./resources/models/stabbs-8k.obj";
+		scale = 0.1f;
+		break;
+	case (1):
+		source = "./resources/models/terrain2b.obj";
+		scale = 7.0f;
+		break;
+	case (2):
+		source = "./resources/models/terrain3a.obj";
+		scale = 7.0f;
+		break;
+	case (4):
+		source = "./resources/models/mesh1-30k-tris.obj";
+		scale = 0.1f;
+		break;
+	case (5):
+		source = "./resources/models/mesh1-130k-tris.obj";
+		scale = 0.1f;
+		break;
+	default:
+		break;
+	}
+	PolyMesh mesh = PolyMesh::PolyMesh(source);
 	mesh.rotate(-3.0f * 3.1415f / 4.0f, glm::vec3(0.0f, 1.0f, 0.0f));
 	// material
 	Phong phong = Phong::Phong(glm::vec3(.2f, .2f, .2f), glm::vec3(.5f, .2f, .2f), glm::vec3(.2f, .2f, .2f), 12);
@@ -57,10 +87,7 @@ int main(int argc, char *argv[])
 
 
 	// transformations
-	//mesh.scale(glm::vec3(.8f));
-	//mesh.scale(glm::vec3(1.5f, 1.5f, 1.5f));
-	//mesh.scale(glm::vec3(0.4));
-	mesh.scale(glm::vec3(0.1f));
+	mesh.scale(glm::vec3(scale));
 
 	TerrainGraph graph;
 	graph.SetPolyMesh(&mesh);

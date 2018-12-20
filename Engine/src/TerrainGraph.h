@@ -188,7 +188,7 @@ public:
 	// Get the volume of water leaving this area
 	float GetWaterVal() { return m_lowestFlowless->GetWaterVal(); }
 	// Number of other regions to bridge into this section
-	int GetOtherBridges() { return m_otherBridges; }
+	std::vector<int> GetOtherBridges() { return m_otherBridges; }
 	// Set ID for this group and all stored vertices
 	void SetID(int id);
 	// Set the flowless vertex
@@ -196,7 +196,7 @@ public:
 	// Adds a list of vertices to this watershed group
 	void AddMembers(std::vector<TerrainVertex*> newMembers);
 	// Add a bridge into this group, from another group
-	void AddBridge(TerrainVertex* in);
+	void AddBridge(TerrainVertex* in, int idFrom);
 	// Find the bridges of this group. Returns the bridge vertices for the other groups to add.
 	std::vector<TerrainVertex*> FindBridges();
 	// Get bridges from here to elsewhere
@@ -206,7 +206,7 @@ public:
 	// True if the watershed leaves the graph region
 	bool IsComplete() { return m_complete; }
 	// Recieve overflow
-	void SendBridgeWater(TerrainVertex* bridge, float water);
+	void SendBridgeWater(TerrainVertex* bridge, float water, int idFrom);
 	// Moves this regions details into the given region
 	void MergeInto(TerrainWaterShed* ws);
 
@@ -216,7 +216,7 @@ private:
 	float m_exitHeight;
 	TerrainVertex* m_lowestFlowless;
 	std::vector<TerrainVertex*> m_thisBridges;
-	int m_otherBridges;
+	std::vector<int> m_otherBridges;
 	std::vector<TerrainVertex*> m_edges;
 	std::vector<TerrainVertex*> m_members;
 };

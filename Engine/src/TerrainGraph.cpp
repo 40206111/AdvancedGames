@@ -39,8 +39,8 @@ float CalculateGradientHelp(glm::vec3 diff) {
 // TERRAIN VERTEX -------------------------------------------------------------------------
 
 float TerrainVertex::GreatestWaterVal = 0.0f;
-float TerrainVertex::RiverThreshold = 300.0f;
-float TerrainVertex::RiverSpreadThreshold = 350.0f;
+float TerrainVertex::RiverThreshold = 1.0f;
+float TerrainVertex::RiverSpreadThreshold = 3.0f;
 int TerrainVertex::ID = 0;
 
 TerrainVertex::TerrainVertex() {
@@ -465,7 +465,7 @@ float TerrainVertex::MakeFlowGroup(vector<TerrainVertex*> &visited, int id) {
 	// For each vertex that flows into this
 	for (TerrainVertex* v : m_flowFrom) {
 		// Perform this function on that vertex
-		AddWater(v->MakeFlowGroup(visited, id));
+		v->MakeFlowGroup(visited, id);
 	}
 	return m_waterVal;
 }
@@ -979,7 +979,6 @@ void TerrainFace::DistributeWater() {
 TerrainWaterShed::TerrainWaterShed() {
 	m_id = -1;
 	m_complete = false;
-	m_otherBridges = 0;
 }
 
 TerrainWaterShed::~TerrainWaterShed() {}
@@ -1027,9 +1026,9 @@ void TerrainWaterShed::AddMembers(vector<TerrainVertex*> newMembers) {
 	}
 }
 
-void TerrainWaterShed::AddBridge(TerrainVertex* in) {
+void TerrainWaterShed::AddBridge(TerrainVertex* in, int idFrom) {
 	// Increase other bridge count
-	m_otherBridges++;
+	m_otherBridges.push_back(idFrom);
 	//// Vertex is already a bridge
 	//bool isHere = false;
 	//// For each bridge
@@ -1154,18 +1153,18 @@ void TerrainWaterShed::MakeLakes() {
 	}
 }
 
-void TerrainWaterShed::SendBridgeWater(TerrainVertex* bridge, float water) {
+void TerrainWaterShed::SendBridgeWater(TerrainVertex* bridge, float water, int idFrom) {
 	// Add the water to the bridge
 	bridge->AddFlowingWater(water);
 	// Decrement bridge count
-	m_otherBridges--;
+	m_otherBridges.erase(find(m_otherBridges.begin(), m_otherBridges.end(), idFrom));
 }
 
 void TerrainWaterShed::MergeInto(TerrainWaterShed* ws) {
 	// Send all bridges equal water
 	for (TerrainVertex* b : m_thisBridges) {
 		if (b->GetBridgeEnd()->GetFlowGroup(SUPER) == ws->GetID()) {
-			ws->SendBridgeWater(b, m_lowestFlowless->GetWaterVal() / (float)m_thisBridges.size());
+			ws->SendBridgeWater(b->GetBridgeEnd(), m_lowestFlowless->GetWaterVal() / (float)m_thisBridges.size(), b->GetFlowGroup(BASE));
 		}
 	}
 	// Give other group the vertices from this one
@@ -1205,7 +1204,7 @@ void TerrainGraph::CreateGraph() {
 		// New terrain vertex
 		TerrainVertex* tv = new TerrainVertex();
 		// Set position from indexed model positions
-		tv->SetPos(obj.vertices[v]);
+		tv->SetPos(glm::vec3(glm::vec4(obj.vertices[v], 1.0f) * m_pm->getTransform().getScale()));
 		// Set normal from indexed model normals
 		//tv->SetNormal(obj.normals[v]);
 		// Add terrainVertex to graph list of vertices
@@ -1314,10 +1313,16 @@ void TerrainGraph::AnalyseGraph() {
 
 	// Find/make bridges and lakes for all regions
 	for (pair<const int, TerrainWaterShed*> ws : m_superWatersheds) {
-		vector<TerrainVertex*> bridges = ws.second->FindBridges();
+		// Find bridges
+		ws.second->FindBridges();
+		vector<TerrainVertex*> bridges = ws.second->GetBridges();
+		// Make rivers from bridge ends
 		for (TerrainVertex* b : bridges) {
-				m_superWatersheds[b->GetFlowGroup(SUPER)]->AddBridge(b);
+			if (b->GetBridgeEnd() != nullptr) {
+				m_superWatersheds[b->GetBridgeEnd()->GetFlowGroup(SUPER)]->AddBridge(b->GetBridgeEnd(), b->GetFlowGroup(BASE));
+			}
 		}
+		// Create lakes
 		ws.second->MakeLakes();
 	}
 
@@ -1330,19 +1335,12 @@ void TerrainGraph::AnalyseGraph() {
 		vector<int> toRemove;
 		// For each super watershed
 		for (pair<const int, TerrainWaterShed*> ws : m_superWatersheds) {
-			if (ws.second->GetOtherBridges() != 0) {
-				int i = ws.second->GetOtherBridges();
-				i += 0;
-			}
 			// If it is not complete, and nothing flows into it
-			if (!ws.second->IsComplete() && !ws.second->GetOtherBridges()) {
+			if (!ws.second->IsComplete() && !ws.second->GetOtherBridges().size()) {
 				// List of bridges this group has
 				vector<TerrainVertex*> bridges = ws.second->GetBridges();
 				// For each of the bridges
 				for (TerrainVertex* b : bridges) {
-					if (b->GetBridgeEnd()->GetFlowGroup(SUPER) == 2) {
-						int hek = 0;
-					}
 					// Merge this group into other
 					ws.second->MergeInto(m_superWatersheds[b->GetBridgeEnd()->GetFlowGroup(SUPER)]);
 				}
@@ -1406,7 +1404,7 @@ void TerrainGraph::ColourWaterGroup() {
 	if (m_superWatersheds.size() == 0) {
 		max = 1;
 	}
-	static int lim = 100;
+	static int lim = 0;
 	// For each vertex
 	for (TerrainVertex* v : m_verts) {
 		// ID of the group the vertex is part of
@@ -1483,7 +1481,7 @@ void TerrainGraph::ColourWaterGroup() {
 	}
 	SendColours();
 	++lim;
-	//lim = lim % max;
+	lim = lim % max;
 }
 
 void TerrainGraph::ColourWaterEdges() {
