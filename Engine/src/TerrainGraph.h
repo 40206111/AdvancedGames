@@ -9,6 +9,7 @@ enum TerrainShape { DEFAULT_V, PEAK, PIT, RIDGE_V, TROUGH_V, HILLTOP, HILLBASE, 
 enum EdgeType { DEFAULT_E, RIDGE_E, TROUGH_E, WATERSHED };
 enum WaterType { NONE, RIVER, LAKE };
 enum RainfallType { RF_NONE, RF_RIVER, RF_FASTRIVER, RF_LAKE };
+enum WaterShedTier { BASE, SUPER };
 
 class TerrainEdge;
 class TerrainFace;
@@ -29,8 +30,8 @@ public:
 	std::vector<TerrainEdge*> GetEdges() { return m_edges; }
 	TerrainShape GetShape() { return m_shape; }
 	TerrainVertex* GetFlowTo() { return m_flowTo; }
-	int GetFlowGroup() { return m_waterShedID; }
-	bool IsFlowEdge() { return m_flowEdge; }
+	int GetFlowGroup(WaterShedTier t) { return (t == BASE ? m_waterShedID : m_superID); }
+	bool IsFlowEdge(WaterShedTier t) { return (t == BASE ? m_flowEdge : m_superFlowEdge); }
 	bool IsFlowEnd() { return m_flowEnd; }
 	bool IsBridge() { return m_bridge; }
 	TerrainVertex* GetBridgeEnd() { return m_bridgeTo; }
@@ -40,7 +41,8 @@ public:
 	RainfallType GetRainType() { return m_rainType; }
 
 	void SetPos(glm::vec3 p) { m_pos = p; }
-	void SetFlowGroup(int id) { m_waterShedID = id; }
+	void SetFlowGroup(int id) { m_superID = m_waterShedID = id; }
+	void SetSuperFlowGroup(int id) { m_superID = id; }
 	void SetAsBridge() { m_bridge = true; }
 	void AddBridgeSource(TerrainVertex* from) { m_bridgeSources.push_back(from); }
 	void SetWaterType(WaterType w);
@@ -56,7 +58,7 @@ public:
 	// Returns false if this vertex does not flow
 	bool CalculateFlow();
 	float MakeFlowGroup(std::vector<TerrainVertex*> &visited, int id);
-	bool CalculateFlowEdge();
+	bool CalculateFlowEdge(WaterShedTier t);
 	void MakeBridge();
 	void FollowSteepUp(std::vector<TerrainVertex*> &visited, int id);
 
@@ -69,6 +71,8 @@ private:
 	void CalculateGradient();
 	// Put edges in anti-clockwise order from x axis
 	void OrderEdges();
+
+	void SetFlowEdge(WaterShedTier t, bool state);
 	// Are edges order by rotation
 	bool m_ordered;
 
@@ -86,7 +90,9 @@ private:
 	TerrainVertex* m_flowTo;
 	std::vector<TerrainVertex*> m_flowFrom;
 	int m_waterShedID;
+	int m_superID;
 	bool m_flowEdge;
+	bool m_superFlowEdge;
 	bool m_flowEnd;
 	bool m_bridge;
 	std::vector<TerrainVertex*> m_bridgeSources;
@@ -193,6 +199,8 @@ public:
 	void AddBridge(TerrainVertex* in);
 	// Find the bridges of this group. Returns the bridge vertices for the other groups to add.
 	std::vector<TerrainVertex*> FindBridges();
+	// Get bridges from here to elsewhere
+	std::vector<TerrainVertex*> GetBridges() { return m_thisBridges; }
 	// Designate lakes
 	void MakeLakes();
 	// True if the watershed leaves the graph region
@@ -245,5 +253,6 @@ private:
 	std::vector<TerrainEdge*> m_prevEdges;
 	std::vector<TerrainVertex*> m_flowless;
 
-	std::vector<TerrainWaterShed*> m_watersheds;
+	std::map<int, TerrainWaterShed*> m_watersheds;
+	std::map<int, TerrainWaterShed*> m_superWatersheds;
 };

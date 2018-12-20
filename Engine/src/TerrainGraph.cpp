@@ -51,6 +51,7 @@ TerrainVertex::TerrainVertex() {
 	m_simVal = 0.2f;
 	m_flowTo = nullptr;
 	m_waterShedID = -1;
+	m_superID = -1;
 	m_flowEdge = false;
 	m_flowEnd = false;
 	m_bridge = false;
@@ -469,28 +470,28 @@ float TerrainVertex::MakeFlowGroup(vector<TerrainVertex*> &visited, int id) {
 	return m_waterVal;
 }
 
-bool TerrainVertex::CalculateFlowEdge() {
+bool TerrainVertex::CalculateFlowEdge(WaterShedTier t) {
 	// Initialise flow edge to false
-	m_flowEdge = false;
+	SetFlowEdge(t, false);
 	// If a graph edge avoid terrainedge checks
 	if (m_graphEdge) {
 		// Set as edge of flow group
-		m_flowEdge = true;
+		SetFlowEdge(t, true);
 	}
 	// Else if not a graph edge determine if edge through checking terrain edges
 	else {
 		// For each edge
 		for (TerrainEdge* te : m_edges) {
 			// If the edge leads to a vertex in a different watershed-group
-			if (te->GetOtherPoint(this)->GetFlowGroup() != m_waterShedID) {
+			if (te->GetOtherPoint(this)->GetFlowGroup(t) != GetFlowGroup(t)) {
 				// Set this vertex as a border of its group
-				m_flowEdge = true;
+				SetFlowEdge(t, true);
 				// Exit function (further testing unneccessary)
 				break;
 			}
 		}
 	}
-	return m_flowEdge;
+	return IsFlowEdge(t);
 }
 
 void TerrainVertex::MakeBridge() {
@@ -499,7 +500,7 @@ void TerrainVertex::MakeBridge() {
 	// For each edge of this vertex
 	for (TerrainEdge* te : m_edges) {
 		// If in a different flow group
-		if (te->GetOtherPoint(this)->GetFlowGroup() != m_waterShedID) {
+		if (te->GetOtherPoint(this)->GetFlowGroup(SUPER) != m_superID) {
 			// Add to list of others
 			others.push_back(te);
 		}
@@ -609,42 +610,49 @@ void TerrainVertex::AddFlowingWater(float water) {
 	m_waterVal += water;
 	m_waterRemaining += water;
 
-	// If a vertex is available to send water to
-	if (m_flowTo != nullptr) {
-		// Check water quantity
-		if (m_waterRemaining > RiverSpreadThreshold) {
-			// Distribute to most horizontal/not-river
+	//// Designate this vertex water type
+	//if (m_waterRemaining > RiverSpreadThreshold) {
+	//	m_rainType = RF_FASTRIVER;
+	//}
+	//else if (m_waterVal > RiverThreshold) {
+	//	SetWaterType(RIVER);
+	//}
+	//// If a vertex is available to send water to
+	//if (m_flowTo != nullptr) {
+	//	// Check water quantity
+	//	if (m_waterRemaining > RiverSpreadThreshold) {
+	//		// Distribute to most horizontal/not-river
 
-			// True if excess water was moved to another vertex
-			bool waterMoved = false;
-			// Go through indices for edges
-			for (int i = 0; i < m_lowestGradients.size(); ++i) {
-				// If the other vertex is not already a river
-				if (m_edges[m_lowestGradients[i]]->GetOtherPoint(this)->GetWaterType() == NONE) {
-					// Volume to move to next vertex
-					float outVal = m_waterRemaining;
-					// While volume moved would cause river to split again 
-					while (outVal > RiverSpreadThreshold) {
-						// Reduce volume moved
-						outVal -= RiverSpreadThreshold;
-					}
-					// Add the water to adjacent, non-water vertex
-					m_edges[m_lowestGradients[i]]->GetOtherPoint(this)->AddFlowingWater(outVal);
-					// Update own water value
-					m_waterRemaining -= outVal;
-					// Update pass on value 
-					passOn -= outVal;
-					// Update boolean
-					waterMoved = true;
-					// Break if more spreading can't happen
-					if (!(m_waterRemaining > RiverSpreadThreshold))
-					{
-						break;
-					}
-				}
-			}
-		}
-	}
+	//		// True if excess water was moved to another vertex
+	//		bool waterMoved = false;
+	//		// Go through indices for edges
+	//		for (int i = 0; i < m_lowestGradients.size(); ++i) {
+	//			// If the other vertex is not already a river
+	//			if (m_edges[m_lowestGradients[i]]->GetOtherPoint(this)->GetRainType() == RF_NONE) {
+	//				// Volume to move to next vertex
+	//				float outVal = m_waterRemaining;
+	//				// While volume moved would cause river to split again 
+	//				while (outVal > RiverSpreadThreshold) {
+	//					// Reduce volume moved
+	//					outVal -= RiverSpreadThreshold;
+	//				}
+	//				// Add the water to adjacent, non-water vertex
+	//				m_edges[m_lowestGradients[i]]->GetOtherPoint(this)->AddFlowingWater(outVal);
+	//				// Update own water value
+	//				m_waterRemaining -= outVal;
+	//				// Update pass on value 
+	//				passOn -= outVal;
+	//				// Update boolean
+	//				waterMoved = true;
+	//				// Break if more spreading can't happen
+	//				if (!(m_waterRemaining > RiverSpreadThreshold))
+	//				{
+	//					break;
+	//				}
+	//			}
+	//		}
+	//	}
+	//}
 	// Give passOn value to next vertex in river
 	if (m_flowTo != nullptr) {
 		m_flowTo->AddFlowingWater(passOn);
@@ -655,6 +663,15 @@ void TerrainVertex::AddFlowingWater(float water) {
 	}
 	else if (m_waterVal > RiverThreshold) {
 		SetWaterType(RIVER);
+	}
+}
+
+void TerrainVertex::SetFlowEdge(WaterShedTier t, bool state) {
+	if (t == BASE) {
+		m_flowEdge = state;
+	}
+	else {
+		m_superFlowEdge = state;
 	}
 }
 
@@ -980,19 +997,19 @@ void TerrainWaterShed::AddMembers(vector<TerrainVertex*> newMembers) {
 	// If this group has no members
 	if (m_members.size() == 0) {
 		// Set this groups id to match vertex id
-		m_id = newMembers.front()->GetFlowGroup();
+		m_id = newMembers.front()->GetFlowGroup(SUPER);
 	}
 	// For each new vertex
 	for (TerrainVertex* v : newMembers) {
 		// Update vertex's id
-		v->SetFlowGroup(m_id);
+		v->SetSuperFlowGroup(m_id);
 		// Add to members
 		m_members.push_back(v);
 	}
 	// Re-evaluate current edges
 	for (int e = 0; e < m_edges.size(); ++e) {
 		// If edge vertex at e is no longer an edge
-		if (!(m_edges[e]->CalculateFlowEdge())) {
+		if (!(m_edges[e]->CalculateFlowEdge(SUPER))) {
 			// Remove vertex from edge list
 			m_edges.erase(m_edges.begin() + e);
 			// Decrement e to avoid skipping vertices
@@ -1003,7 +1020,7 @@ void TerrainWaterShed::AddMembers(vector<TerrainVertex*> newMembers) {
 	// For each member
 	for (TerrainVertex* v : m_members) {
 		// If v finds itself on an edge
-		if (v->CalculateFlowEdge()) {
+		if (v->CalculateFlowEdge(SUPER)) {
 			// Add v to edges list
 			m_edges.push_back(v);
 		}
@@ -1080,7 +1097,7 @@ std::vector<TerrainVertex*> TerrainWaterShed::FindBridges() {
 				// Other vertex
 				TerrainVertex* vOther = e->GetOtherPoint(v);
 				// If other vertex is in a different group
-				if (vOther->GetFlowGroup() != v->GetFlowGroup()) {
+				if (vOther->GetFlowGroup(SUPER) != v->GetFlowGroup(SUPER)) {
 					// If other variables are uninitialised
 					if (firstOther) {
 						otherLowest = vOther->GetPos().y;
@@ -1147,7 +1164,9 @@ void TerrainWaterShed::SendBridgeWater(TerrainVertex* bridge, float water) {
 void TerrainWaterShed::MergeInto(TerrainWaterShed* ws) {
 	// Send all bridges equal water
 	for (TerrainVertex* b : m_thisBridges) {
-		//ws->SendBridgeWater(b, m_lowestFlowless->GetWaterVal() / (float) m_thisBridges.size());
+		if (b->GetFlowGroup(SUPER) == ws->GetID()) {
+			ws->SendBridgeWater(b, m_lowestFlowless->GetWaterVal() / (float)m_thisBridges.size());
+		}
 	}
 	// Give other group the vertices from this one
 	ws->AddMembers(m_members);
@@ -1281,59 +1300,96 @@ void TerrainGraph::AnalyseGraph() {
 
 		// Make new terrain watershed
 		TerrainWaterShed* tws = new TerrainWaterShed();
+		TerrainWaterShed* supertws = new TerrainWaterShed();
 		// Add vertices to it
 		tws->AddMembers(visited);
+		supertws->AddMembers(visited);
+		// Add flowless to area
+		tws->SetFlowless(v);
+		supertws->SetFlowless(v);
 		// Add watershed to list
-		m_watersheds.push_back(tws);
+		m_watersheds[tws->GetID()] = tws;
+		m_superWatersheds[supertws->GetID()] = supertws;
 	}
 
-	// For each watershed group
-	for (int w = 0; w < m_watersheds.size(); ++w) {
-		// True if watershed merged into another region
-		bool thisRemoved = false;
-		// Find bridges
-		vector<TerrainVertex*> bridges = m_watersheds[w]->FindBridges();
-		// For each vertex that is a bridge from this watershed
-		for (TerrainVertex* v : bridges) {
-			// Find watershed group it is part of 
-			for (TerrainWaterShed* ws2 : m_watersheds) {
-				if (ws2->GetID() == v->GetFlowGroup()) {
-					// Add it as a bridge to the group
-					ws2->AddBridge(v);
-					m_watersheds[w]->MergeInto(ws2);
-					thisRemoved = true;
+	// Find/make bridges and lakes for all regions
+	for (pair<const int, TerrainWaterShed*> ws : m_superWatersheds) {
+		ws.second->FindBridges();
+		ws.second->MakeLakes();
+	}
+
+	// Flow groups into each other when they don't have any bridges into them. Repeat till done
+	bool flowed = true;
+	while (flowed) {
+		flowed = false;
+		vector<int> toRemove;
+		for (pair<const int, TerrainWaterShed*> ws : m_superWatersheds) {
+			if (!ws.second->IsComplete() && !ws.second->GetOtherBridges()) {
+				vector<TerrainVertex*> bridges = ws.second->GetBridges();
+				for (TerrainVertex* b : bridges) {
+					ws.second->MergeInto(m_superWatersheds[b->GetBridgeEnd()->GetFlowGroup(SUPER)]);
 				}
+				toRemove.push_back(ws.first);
+				flowed = true;
 			}
 		}
-		// Create lakes
-		m_watersheds[w]->MakeLakes();
-		// If this region was merged into another
-		if (thisRemoved) {
-			// Remove region from the list
-			m_watersheds.erase(find(m_watersheds.begin(), m_watersheds.end(), m_watersheds[w]));
-			// Decrement iterator
-			--w;
+		for (int r : toRemove) {
+			m_superWatersheds.erase(r);
 		}
 	}
+
+	//// For each watershed group
+	//for (int w = 0; w < m_superWatersheds.size(); ++w) {
+	//	// True if watershed merged into another region
+	//	bool thisRemoved = false;
+	//	// Find bridges
+	//	vector<TerrainVertex*> bridges = m_superWatersheds[w]->FindBridges();
+	//	// For each vertex that is a bridge from this watershed
+	//	for (TerrainVertex* v : bridges) {
+	//		// Find watershed group it is part of 
+	//		for (TerrainWaterShed* ws2 : m_superWatersheds) {
+	//			if (ws2->GetID() == v->GetFlowGroup(SUPER)) {
+	//				// Add it as a bridge to the group
+	//				ws2->AddBridge(v);
+	//				m_superWatersheds[w]->MergeInto(ws2);
+	//				thisRemoved = true;
+	//			}
+	//		}
+	//	}
+	//	// Create lakes
+	//	m_superWatersheds[w]->MakeLakes();
+	//	// If this region was merged into another
+	//	if (thisRemoved) {
+	//		// Remove region from the list
+	//		m_superWatersheds.erase(find(m_superWatersheds.begin(), m_superWatersheds.end(), m_superWatersheds[w]));
+	//		// Decrement iterator
+	//		--w;
+	//	}
+	//}
 	// Reset group id's for colour purposes
-	for (int id = 0; id < m_watersheds.size(); ++id) {
+	map<int, TerrainWaterShed*> newMap;
+	int id = 0;
+	for (pair<const int, TerrainWaterShed*> tw : m_superWatersheds) {
 		// Set ID
-		m_watersheds[id]->SetID(id);
+		tw.second->SetID(id);
+		newMap[id] = tw.second;
+		id++;
 	}
+	m_superWatersheds = newMap;
 }
 
 void TerrainGraph::ColourWaterGroup() {
 	m_uniqueColours.clear();
 	m_nonUniqueColours.clear();
-	int max = m_watersheds.size();
-	if (m_watersheds.size() == 0) {
+	int max = m_superWatersheds.size();
+	if (m_superWatersheds.size() == 0) {
 		max = 1;
 	}
 	static int lim = 0;
 	// For each vertex
 	for (TerrainVertex* v : m_verts) {
 		// ID of the group the vertex is part of
-		int flowGroup = v->GetFlowGroup();
+		int flowGroup = v->GetFlowGroup(SUPER);
 		switch (flowGroup)
 		{
 			// Multiple flow groups
@@ -1392,7 +1448,7 @@ void TerrainGraph::ColourWaterGroup() {
 					colour.a = 1.0f;
 				}
 				// Else if edge vertex
-				else if (v->IsFlowEdge()) {
+				else if (v->IsFlowEdge(SUPER)) {
 					// Colour darker by 20%
 					colour = colour * 0.8f;
 					// Maximise alpha
@@ -1423,7 +1479,7 @@ void TerrainGraph::ColourWaterEdges() {
 			m_uniqueColours.push_back(glm::vec4(1.0f));
 		}
 		// If edge colour orange
-		else if (v->IsFlowEdge()) {
+		else if (v->IsFlowEdge(SUPER)) {
 			m_uniqueColours.push_back(glm::vec4(0.7f, 0.2f, 0.1f, 1.0f));
 		}
 		// Colour other vertices grey

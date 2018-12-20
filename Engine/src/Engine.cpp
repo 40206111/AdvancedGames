@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
 	// maybe saddle.obj
 	// peak.obj
 	// valley.obj
-	PolyMesh mesh = PolyMesh::PolyMesh("./resources/models/mesh1-30k-tris.obj");
+	PolyMesh mesh = PolyMesh::PolyMesh("./resources/models/stabbs-8k.obj");
 	mesh.rotate(-3.0f * 3.1415f / 4.0f, glm::vec3(0.0f, 1.0f, 0.0f));
 	// material
 	Phong phong = Phong::Phong(glm::vec3(.2f, .2f, .2f), glm::vec3(.5f, .2f, .2f), glm::vec3(.2f, .2f, .2f), 12);
