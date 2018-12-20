@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
 	// terrain3a.obj
 	string source = "./resources/models/stabbs-8k.obj";
 	float scale = 0.1f;
-	int doTerrain = 2;
+	int doTerrain = 0;
 	switch (doTerrain)
 	{
 	case (0):

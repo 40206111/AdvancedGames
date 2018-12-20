@@ -1106,12 +1106,19 @@ std::vector<TerrainVertex*> TerrainWaterShed::FindBridges() {
 			}
 		}
 	}
-	// If a vertex has been found
-	if (lowV != nullptr) {
-		// Save bridge details
-		lowV->MakeBridge((lowOthers.size() > 0 ? lowOthers.front() : nullptr));
-		m_thisBridges.push_back(lowV);
-		m_exitHeight = lowest;
+	// If the watershed group doesn't have a bridge coming from the goup it's about to make a bridge to proceed with bridge making
+	if (lowOthers.size() == 0 || find(m_otherBridges.begin(), m_otherBridges.end(), lowOthers.front()->GetFlowGroup(BASE)) == m_otherBridges.end()) {
+		// If a vertex has been found
+		if (lowV != nullptr) {
+			// Save bridge details
+			lowV->MakeBridge((lowOthers.size() > 0 ? lowOthers.front() : nullptr));
+			m_thisBridges.push_back(lowV);
+			m_exitHeight = lowest;
+		}
+	}
+	// If this watershed has a bridge from the group it'd bridge to, do not bridge to that group
+	else {
+		lowOthers.clear();
 	}
 	// Return bridge vertices in other watersheds
 	return lowOthers;
