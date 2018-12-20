@@ -662,7 +662,7 @@ void TerrainVertex::AddFlowingWater(float water) {
 		m_rainType = RF_FASTRIVER;
 	}
 	else if (m_waterVal > RiverThreshold) {
-		SetWaterType(RIVER);
+		m_rainType = RF_RIVER;
 	}
 }
 
@@ -1164,7 +1164,7 @@ void TerrainWaterShed::SendBridgeWater(TerrainVertex* bridge, float water) {
 void TerrainWaterShed::MergeInto(TerrainWaterShed* ws) {
 	// Send all bridges equal water
 	for (TerrainVertex* b : m_thisBridges) {
-		if (b->GetFlowGroup(SUPER) == ws->GetID()) {
+		if (b->GetBridgeEnd()->GetFlowGroup(SUPER) == ws->GetID()) {
 			ws->SendBridgeWater(b, m_lowestFlowless->GetWaterVal() / (float)m_thisBridges.size());
 		}
 	}
@@ -1314,7 +1314,10 @@ void TerrainGraph::AnalyseGraph() {
 
 	// Find/make bridges and lakes for all regions
 	for (pair<const int, TerrainWaterShed*> ws : m_superWatersheds) {
-		ws.second->FindBridges();
+		vector<TerrainVertex*> bridges = ws.second->FindBridges();
+		for (TerrainVertex* b : bridges) {
+				m_superWatersheds[b->GetFlowGroup(SUPER)]->AddBridge(b);
+		}
 		ws.second->MakeLakes();
 	}
 
@@ -1327,13 +1330,19 @@ void TerrainGraph::AnalyseGraph() {
 		vector<int> toRemove;
 		// For each super watershed
 		for (pair<const int, TerrainWaterShed*> ws : m_superWatersheds) {
+			if (ws.second->GetOtherBridges() != 0) {
+				int i = ws.second->GetOtherBridges();
+				i += 0;
+			}
 			// If it is not complete, and nothing flows into it
 			if (!ws.second->IsComplete() && !ws.second->GetOtherBridges()) {
 				// List of bridges this group has
 				vector<TerrainVertex*> bridges = ws.second->GetBridges();
 				// For each of the bridges
 				for (TerrainVertex* b : bridges) {
-					m_superWatersheds[b->GetBridgeEnd()->GetFlowGroup(SUPER)]->AddBridge(b->GetBridgeEnd());
+					if (b->GetBridgeEnd()->GetFlowGroup(SUPER) == 2) {
+						int hek = 0;
+					}
 					// Merge this group into other
 					ws.second->MergeInto(m_superWatersheds[b->GetBridgeEnd()->GetFlowGroup(SUPER)]);
 				}
@@ -1377,6 +1386,7 @@ void TerrainGraph::AnalyseGraph() {
 	//		--w;
 	//	}
 	//}
+
 	// Reset group id's for colour purposes
 	map<int, TerrainWaterShed*> newMap;
 	int id = 0;
