@@ -455,12 +455,12 @@ float TerrainVertex::MakeFlowGroup(vector<TerrainVertex*> &visited, int id) {
 	// If not part of any group
 	if (m_waterShedID == -1) {
 		// Set id to current group id
-		m_waterShedID = id;
+		SetFlowGroup(id);
 	}
 	// If already part of a group
 	else {
 		// Set id to -2 (meaning in multiple groups)
-		m_waterShedID = -2;
+		// m_waterShedID = -2;
 	}
 	// For each vertex that flows into this
 	for (TerrainVertex* v : m_flowFrom) {
@@ -1321,18 +1321,29 @@ void TerrainGraph::AnalyseGraph() {
 	// Flow groups into each other when they don't have any bridges into them. Repeat till done
 	bool flowed = true;
 	while (flowed) {
+		// If any region merges this is set to true
 		flowed = false;
+		// List of id's to remove
 		vector<int> toRemove;
+		// For each super watershed
 		for (pair<const int, TerrainWaterShed*> ws : m_superWatersheds) {
+			// If it is not complete, and nothing flows into it
 			if (!ws.second->IsComplete() && !ws.second->GetOtherBridges()) {
+				// List of bridges this group has
 				vector<TerrainVertex*> bridges = ws.second->GetBridges();
+				// For each of the bridges
 				for (TerrainVertex* b : bridges) {
+					m_superWatersheds[b->GetBridgeEnd()->GetFlowGroup(SUPER)]->AddBridge(b->GetBridgeEnd());
+					// Merge this group into other
 					ws.second->MergeInto(m_superWatersheds[b->GetBridgeEnd()->GetFlowGroup(SUPER)]);
 				}
+				// Add merged key value to list for removal
 				toRemove.push_back(ws.first);
+				// A region has flowed
 				flowed = true;
 			}
 		}
+		// Remove all flowed regions
 		for (int r : toRemove) {
 			m_superWatersheds.erase(r);
 		}
@@ -1385,7 +1396,7 @@ void TerrainGraph::ColourWaterGroup() {
 	if (m_superWatersheds.size() == 0) {
 		max = 1;
 	}
-	static int lim = 0;
+	static int lim = 100;
 	// For each vertex
 	for (TerrainVertex* v : m_verts) {
 		// ID of the group the vertex is part of
@@ -1462,7 +1473,7 @@ void TerrainGraph::ColourWaterGroup() {
 	}
 	SendColours();
 	++lim;
-	lim = lim % max;
+	//lim = lim % max;
 }
 
 void TerrainGraph::ColourWaterEdges() {
