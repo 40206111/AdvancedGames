@@ -59,7 +59,7 @@ public:
 	bool CalculateFlow();
 	float MakeFlowGroup(std::vector<TerrainVertex*> &visited, int id);
 	bool CalculateFlowEdge(WaterShedTier t);
-	void MakeBridge();
+	void MakeBridge(TerrainVertex* bridgeEnd);
 	void FollowSteepUp(std::vector<TerrainVertex*> &visited, int id);
 
 	void AddFlowSource(TerrainVertex* source);

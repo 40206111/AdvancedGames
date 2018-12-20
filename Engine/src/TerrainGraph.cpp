@@ -494,36 +494,14 @@ bool TerrainVertex::CalculateFlowEdge(WaterShedTier t) {
 	return IsFlowEdge(t);
 }
 
-void TerrainVertex::MakeBridge() {
-	// Edges that lead to other flow groups
-	vector<TerrainEdge*> others;
-	// For each edge of this vertex
-	for (TerrainEdge* te : m_edges) {
-		// If in a different flow group
-		if (te->GetOtherPoint(this)->GetFlowGroup(SUPER) != m_superID) {
-			// Add to list of others
-			others.push_back(te);
-		}
+void TerrainVertex::MakeBridge(TerrainVertex* bridgeEnd) {
+	// Make this vertex and the end a bridge
+	if (bridgeEnd != nullptr) {
+		bridgeEnd->SetAsBridge();
+		bridgeEnd->AddBridgeSource(this);
+		m_bridgeTo = bridgeEnd;
 	}
-	// Tracks lowest gradient
-	float grad = 1.1f;
-	// Edge to bridge to
-	TerrainEdge* bridge = nullptr;
-	// For each edge not in flow group
-	for (TerrainEdge* te : others) {
-		// If new lowest gradient is found
-		if (te->GetGradient(this) < grad) {
-			grad = te->GetGradient(this);
-			bridge = te;
-		}
-	}
-	// If a bridge vertex was found
-	if (bridge != nullptr) {
-		bridge->GetOtherPoint(this)->SetAsBridge();
-		bridge->GetOtherPoint(this)->AddBridgeSource(this);
-		m_bridge = true;
-		m_bridgeTo = bridge->GetOtherPoint(this);
-	}
+	m_bridge = true;
 }
 
 void TerrainVertex::FollowSteepUp(vector<TerrainVertex*> &visited, int id) {
@@ -1131,7 +1109,7 @@ std::vector<TerrainVertex*> TerrainWaterShed::FindBridges() {
 	// If a vertex has been found
 	if (lowV != nullptr) {
 		// Save bridge details
-		lowV->MakeBridge();
+		lowV->MakeBridge((lowOthers.size() > 0 ? lowOthers.front() : nullptr));
 		m_thisBridges.push_back(lowV);
 		m_exitHeight = lowest;
 	}
