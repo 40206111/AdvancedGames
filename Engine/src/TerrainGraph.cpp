@@ -39,6 +39,7 @@ float CalculateGradientHelp(glm::vec3 diff) {
 // TERRAIN VERTEX -------------------------------------------------------------------------
 
 float TerrainVertex::GreatestWaterVal = 0.0f;
+float TerrainVertex::IrrigationThreshold = 0.005f;
 float TerrainVertex::RiverThreshold = 1.0f;
 float TerrainVertex::RiverSpreadThreshold = 3.0f;
 int TerrainVertex::ID = 0;
@@ -62,6 +63,7 @@ TerrainVertex::TerrainVertex() {
 	m_id = ID++;
 	m_rainType = RF_NONE;
 	m_bridgeTo = nullptr;
+	m_regionBridge = nullptr;
 }
 TerrainVertex::~TerrainVertex() {}
 
@@ -70,6 +72,15 @@ void TerrainVertex::SetWaterType(WaterType w) {
 	if (m_water < w) {
 		// Set new watertype
 		m_water = w;
+	}
+}
+
+void TerrainVertex::SetRainfallType(RainfallType r)
+{
+	// If value of stored rainfall is less than new one
+	if (m_rainType != RF_LAKE) {
+		// Set new rainfall
+		m_rainType = r;
 	}
 }
 
@@ -574,7 +585,7 @@ void TerrainVertex::AddWater(float water) {
 	m_waterRemaining += water;
 	// Make a river if enough water
 	if (m_waterVal > RiverThreshold) {
-		m_rainType = RF_RIVER;
+		SetRainfallType(RF_RIVER);
 	}
 
 	// AVOID FUTURE FOR NOW 
@@ -635,12 +646,18 @@ void TerrainVertex::AddFlowingWater(float water) {
 	if (m_flowTo != nullptr) {
 		m_flowTo->AddFlowingWater(passOn);
 	}
+	else if (m_regionBridge != nullptr) {
+		m_regionBridge->AddFlowingWater(passOn);
+	}
 	// Designate this vertex water type
 	if (m_waterRemaining > RiverSpreadThreshold) {
-		m_rainType = RF_FASTRIVER;
+		SetRainfallType(RF_FASTRIVER);
 	}
 	else if (m_waterVal > RiverThreshold) {
-		m_rainType = RF_RIVER;
+		SetRainfallType(RF_RIVER);
+	}
+	else if (m_waterVal > IrrigationThreshold) {
+		SetRainfallType(RF_IRRIGATED);
 	}
 }
 
@@ -1154,6 +1171,31 @@ void TerrainWaterShed::MakeLakes() {
 	}
 }
 
+void TerrainWaterShed::MakeRainfallLakes() {
+	// The water reaches the bridge as a river
+	bool riverExit = false;
+	// For each bridge, check it's water status
+	for (TerrainVertex* v : m_thisBridges) {
+		if (v->GetRainType() > RF_RIVER) {
+			riverExit = true;
+		}
+	}
+	// If the water didn't reach a bridge, make rf lakes
+	if (!riverExit) {
+		// For each memeber vertex
+		for (TerrainVertex* v : m_members) {
+			// If below the height of water exit
+			if (v->GetPos().y <= m_exitHeight) {
+				v->SetRainfallType(RF_LAKE);
+				// If this vertex is on the graph edge this region is complete
+				if (v->IsGraphEdge()) {
+					m_complete = true;
+				}
+			}
+		}
+	}
+}
+
 void TerrainWaterShed::SendBridgeWater(TerrainVertex* bridge, float water, int* idFrom) {
 	// Add the water to the bridge
 	bridge->AddFlowingWater(water);
@@ -1165,6 +1207,7 @@ void TerrainWaterShed::MergeInto(TerrainWaterShed* ws) {
 	// Send all bridges equal water
 	for (TerrainVertex* b : m_thisBridges) {
 		if (*b->GetBridgeEnd()->GetFlowGroup(SUPER) == ws->GetID()) {
+			m_lowestFlowless->SetRegionBridge(b->GetBridgeEnd());
 			ws->SendBridgeWater(b->GetBridgeEnd(), m_lowestFlowless->GetWaterVal() / (float)m_thisBridges.size(), b->GetFlowGroup(SUPER));
 		}
 	}
@@ -1328,6 +1371,7 @@ void TerrainGraph::AnalyseGraph() {
 			}
 			// Create lakes
 			ws.second->MakeLakes();
+			ws.second->MakeRainfallLakes();
 		}
 
 		// Flow groups into each other when they don't have any bridges into them. Repeat till done
@@ -1559,11 +1603,17 @@ void TerrainGraph::ColourRainfallBodies() {
 	// For all vertices
 	for (TerrainVertex* v : m_verts) {
 		switch (v->GetRainType()) {
+		case(RF_LAKE):
+			m_uniqueColours.push_back(glm::vec4(0.1f, 0.1f, 0.3f, 1.0f)); // Super dark blue
+			break;
 		case(RF_FASTRIVER):
-			m_uniqueColours.push_back(glm::vec4(0.3f, 0.3f, 0.6f, 1.0f)); // Dark blue
+			m_uniqueColours.push_back(glm::vec4(0.5f, 0.5f, 1.0f, 1.0f)); // Light blue
 			break;
 		case(RF_RIVER):
-			m_uniqueColours.push_back(glm::vec4(0.5f, 0.5f, 1.0f, 1.0f)); // Light blue
+			m_uniqueColours.push_back(glm::vec4(0.3f, 0.3f, 0.8f, 1.0f)); // Dark blue
+			break;
+		case(RF_IRRIGATED):
+			m_uniqueColours.push_back(glm::vec4(0.1f, 0.4f, 0.2f, 1.0f)); // Forest green
 			break;
 		default:
 			m_uniqueColours.push_back(glm::vec4(0.3f, 0.3f, 0.3f, 1.0f)); // Grey
