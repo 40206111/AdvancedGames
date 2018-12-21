@@ -40,7 +40,7 @@ float CalculateGradientHelp(glm::vec3 diff) {
 
 float TerrainVertex::GreatestWaterVal = 0.0f;
 float TerrainVertex::IrrigationThreshold = 0.005f;
-float TerrainVertex::RiverThreshold = 1.0f;
+float TerrainVertex::RiverThreshold = 0.5f;
 float TerrainVertex::RiverSpreadThreshold = 3.0f;
 int TerrainVertex::ID = 0;
 
@@ -1706,7 +1706,7 @@ void TerrainGraph::ColourWaterVals() {
 	// For each vertex
 	for (TerrainVertex* v : m_verts) {
 		//float frac = v->GetWaterVal() / TerrainVertex::GreatestWaterVal;
-		float frac = v->GetWaterVal() / 1.0f;
+		float frac = v->GetWaterVal() / TerrainVertex::RiverThreshold;
 		if (frac > 1.0f) {
 			frac = 1.0f;
 		}
