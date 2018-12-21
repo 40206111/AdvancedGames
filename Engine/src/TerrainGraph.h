@@ -8,7 +8,7 @@
 enum TerrainShape { DEFAULT_V, PEAK, PIT, RIDGE_V, TROUGH_V, HILLTOP, HILLBASE, SLOPE, FLAT, SADDLE };
 enum EdgeType { DEFAULT_E, RIDGE_E, TROUGH_E, WATERSHED };
 enum WaterType { NONE, RIVER, LAKE };
-enum RainfallType { RF_NONE, RF_IRRIGATED, RF_RIVER, RF_FASTRIVER, RF_LAKE };
+enum RainfallType { RF_NONE, RF_IRRIGATED, RF_SWAMP, RF_RIVER, RF_FASTRIVER, RF_LAKE };
 enum WaterShedTier { BASE, SUPER };
 
 class TerrainEdge;

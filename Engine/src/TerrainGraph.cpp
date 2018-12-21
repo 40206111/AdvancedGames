@@ -1182,11 +1182,17 @@ void TerrainWaterShed::MakeRainfallLakes() {
 	}
 	// If the water didn't reach a bridge, make rf lakes
 	if (!riverExit) {
+		// What to set below-overflow vertices to (currently damp ground)
+		RainfallType type = RF_SWAMP;
+		// If the flowless has a body of water make lakes instead of damp ground
+		if (m_lowestFlowless->GetRainType() > RF_SWAMP) {
+			type = RF_LAKE;
+		}
 		// For each memeber vertex
 		for (TerrainVertex* v : m_members) {
 			// If below the height of water exit
 			if (v->GetPos().y <= m_exitHeight) {
-				v->SetRainfallType(RF_LAKE);
+				v->SetRainfallType(type);
 				// If this vertex is on the graph edge this region is complete
 				if (v->IsGraphEdge()) {
 					m_complete = true;
@@ -1611,6 +1617,9 @@ void TerrainGraph::ColourRainfallBodies() {
 			break;
 		case(RF_RIVER):
 			m_uniqueColours.push_back(glm::vec4(0.3f, 0.3f, 0.8f, 1.0f)); // Dark blue
+			break;
+		case(RF_SWAMP):
+			m_uniqueColours.push_back(glm::vec4(0.4f, 0.7f, 0.1f, 1.0f)); // Forest green
 			break;
 		case(RF_IRRIGATED):
 			m_uniqueColours.push_back(glm::vec4(0.1f, 0.4f, 0.2f, 1.0f)); // Forest green
