@@ -483,7 +483,7 @@ bool TerrainVertex::CalculateFlowEdge(WaterShedTier t) {
 		// For each edge
 		for (TerrainEdge* te : m_edges) {
 			// If the edge leads to a vertex in a different watershed-group
-			if (te->GetOtherPoint(this)->GetFlowGroup(t) != GetFlowGroup(t)) {
+			if (*te->GetOtherPoint(this)->GetFlowGroup(t) != *GetFlowGroup(t)) {
 				// Set this vertex as a border of its group
 				SetFlowEdge(t, true);
 				// Exit function (further testing unneccessary)
@@ -974,7 +974,7 @@ void TerrainWaterShed::AddMembers(vector<TerrainVertex*> newMembers) {
 	// If this group has no members
 	if (m_members.size() == 0) {
 		// Set this groups id to match vertex id
-		m_id = newMembers.front()->GetFlowGroup(SUPER);
+		m_id = *newMembers.front()->GetFlowGroup(SUPER);
 	}
 	// For each new vertex
 	for (TerrainVertex* v : newMembers) {
@@ -1004,7 +1004,7 @@ void TerrainWaterShed::AddMembers(vector<TerrainVertex*> newMembers) {
 	}
 }
 
-void TerrainWaterShed::AddBridge(TerrainVertex* in, int idFrom) {
+void TerrainWaterShed::AddBridge(TerrainVertex* in, int* idFrom) {
 	// Increase other bridge count
 	m_otherBridges.push_back(idFrom);
 	//// Vertex is already a bridge
@@ -1040,10 +1040,14 @@ void TerrainWaterShed::AddBridge(TerrainVertex* in, int idFrom) {
 }
 
 std::vector<TerrainVertex*> TerrainWaterShed::FindBridges() {
-	// Empty list of bridges
-	m_thisBridges.clear();
 	// Return list of bridges in other groups
 	vector<TerrainVertex*> lowOthers;
+	// If complete, avoid entire method
+	if (m_complete) {
+		return lowOthers;
+	}
+	// Empty list of bridges
+	m_thisBridges.clear();
 	// If no edges exist in this watershed, return early
 	if (m_edges.size() == 0) {
 		return lowOthers;
@@ -1061,12 +1065,13 @@ std::vector<TerrainVertex*> TerrainWaterShed::FindBridges() {
 			// Tracking for the other vertex
 			float otherLowest;
 			TerrainVertex* otherLowV = nullptr;
+			// The first vertex to be found from a different group
+			bool firstOther = true;
 			// If this vertex is a graph edge, initialise otherLowest to its height
 			if (v->IsGraphEdge()) {
 				otherLowest = v->GetPos().y;
+				firstOther = false;
 			}
-			// The first vertex to be found from a different group
-			bool firstOther = true;
 			// Get edges v has
 			vector<TerrainEdge*> vEdges = v->GetEdges();
 			// For each edge
@@ -1074,11 +1079,12 @@ std::vector<TerrainVertex*> TerrainWaterShed::FindBridges() {
 				// Other vertex
 				TerrainVertex* vOther = e->GetOtherPoint(v);
 				// If other vertex is in a different group
-				if (vOther->GetFlowGroup(SUPER) != v->GetFlowGroup(SUPER)) {
+				if (*vOther->GetFlowGroup(SUPER) != *v->GetFlowGroup(SUPER)) {
 					// If other variables are uninitialised
 					if (firstOther) {
 						otherLowest = vOther->GetPos().y;
 						otherLowV = vOther;
+						firstOther = false;
 					}
 					else {
 						// If the other vertex is also lower than lowest
@@ -1106,8 +1112,17 @@ std::vector<TerrainVertex*> TerrainWaterShed::FindBridges() {
 			}
 		}
 	}
-	// If the watershed group doesn't have a bridge coming from the goup it's about to make a bridge to proceed with bridge making
-	if (lowOthers.size() == 0 || find(m_otherBridges.begin(), m_otherBridges.end(), lowOthers.front()->GetFlowGroup(BASE)) == m_otherBridges.end()) {
+	bool foundID = false;
+	if (lowOthers.size()) {
+		for (int* id : m_otherBridges) {
+			if (*id == *lowOthers.front()->GetFlowGroup(SUPER)) {
+				foundID = true;
+				break;
+			}
+		}
+	}
+	// If the watershed group doesn't have a bridge coming from the group it's about to make a bridge to proceed with bridge making
+	if (lowOthers.size() == 0 || !foundID) {
 		// If a vertex has been found
 		if (lowV != nullptr) {
 			// Save bridge details
@@ -1118,6 +1133,7 @@ std::vector<TerrainVertex*> TerrainWaterShed::FindBridges() {
 	}
 	// If this watershed has a bridge from the group it'd bridge to, do not bridge to that group
 	else {
+		m_exitHeight = m_lowestFlowless->GetPos().y - 1.0f;
 		lowOthers.clear();
 	}
 	// Return bridge vertices in other watersheds
@@ -1138,7 +1154,7 @@ void TerrainWaterShed::MakeLakes() {
 	}
 }
 
-void TerrainWaterShed::SendBridgeWater(TerrainVertex* bridge, float water, int idFrom) {
+void TerrainWaterShed::SendBridgeWater(TerrainVertex* bridge, float water, int* idFrom) {
 	// Add the water to the bridge
 	bridge->AddFlowingWater(water);
 	// Decrement bridge count
@@ -1148,8 +1164,8 @@ void TerrainWaterShed::SendBridgeWater(TerrainVertex* bridge, float water, int i
 void TerrainWaterShed::MergeInto(TerrainWaterShed* ws) {
 	// Send all bridges equal water
 	for (TerrainVertex* b : m_thisBridges) {
-		if (b->GetBridgeEnd()->GetFlowGroup(SUPER) == ws->GetID()) {
-			ws->SendBridgeWater(b->GetBridgeEnd(), m_lowestFlowless->GetWaterVal() / (float)m_thisBridges.size(), b->GetFlowGroup(BASE));
+		if (*b->GetBridgeEnd()->GetFlowGroup(SUPER) == ws->GetID()) {
+			ws->SendBridgeWater(b->GetBridgeEnd(), m_lowestFlowless->GetWaterVal() / (float)m_thisBridges.size(), b->GetFlowGroup(SUPER));
 		}
 	}
 	// Give other group the vertices from this one
@@ -1296,48 +1312,71 @@ void TerrainGraph::AnalyseGraph() {
 		m_superWatersheds[supertws->GetID()] = supertws;
 	}
 
-	// Find/make bridges and lakes for all regions
-	for (pair<const int, TerrainWaterShed*> ws : m_superWatersheds) {
-		// Find bridges
-		ws.second->FindBridges();
-		vector<TerrainVertex*> bridges = ws.second->GetBridges();
-		// Make rivers from bridge ends
-		for (TerrainVertex* b : bridges) {
-			if (b->GetBridgeEnd() != nullptr) {
-				m_superWatersheds[b->GetBridgeEnd()->GetFlowGroup(SUPER)]->AddBridge(b->GetBridgeEnd(), b->GetFlowGroup(BASE));
-			}
-		}
-		// Create lakes
-		ws.second->MakeLakes();
-	}
-
-	// Flow groups into each other when they don't have any bridges into them. Repeat till done
-	bool flowed = true;
-	while (flowed) {
-		// If any region merges this is set to true
-		flowed = false;
-		// List of id's to remove
-		vector<int> toRemove;
-		// For each super watershed
+	bool incomplete = true;
+	while (incomplete) {
+		incomplete = false;
+		// Find/make bridges and lakes for all regions
 		for (pair<const int, TerrainWaterShed*> ws : m_superWatersheds) {
-			// If it is not complete, and nothing flows into it
-			if (!ws.second->IsComplete() && !ws.second->GetOtherBridges().size()) {
-				// List of bridges this group has
-				vector<TerrainVertex*> bridges = ws.second->GetBridges();
-				// For each of the bridges
-				for (TerrainVertex* b : bridges) {
-					// Merge this group into other
-					ws.second->MergeInto(m_superWatersheds[b->GetBridgeEnd()->GetFlowGroup(SUPER)]);
+			// Find bridges
+			ws.second->FindBridges();
+			vector<TerrainVertex*> bridges = ws.second->GetBridges();
+			// Make rivers from bridge ends
+			for (TerrainVertex* b : bridges) {
+				if (b->GetBridgeEnd() != nullptr) {
+					m_superWatersheds[*b->GetBridgeEnd()->GetFlowGroup(SUPER)]->AddBridge(b->GetBridgeEnd(), b->GetFlowGroup(SUPER));
 				}
-				// Add merged key value to list for removal
-				toRemove.push_back(ws.first);
-				// A region has flowed
-				flowed = true;
+			}
+			// Create lakes
+			ws.second->MakeLakes();
+		}
+
+		// Flow groups into each other when they don't have any bridges into them. Repeat till done
+		bool flowed = true;
+		while (flowed) {
+			// If any region merges this is set to true
+			flowed = false;
+			// List of id's to remove
+			vector<int> toRemove;
+			// For each super watershed
+			for (pair<const int, TerrainWaterShed*> ws : m_superWatersheds) {
+				if (ws.first == 9) {
+					int stop = 0;
+				}
+				// If it is not complete, and nothing flows into it
+				if (!ws.second->GetOtherBridges().size()) {
+					// List of bridges this group has
+					vector<TerrainVertex*> bridges = ws.second->GetBridges();
+					if (!bridges.size()) {
+						continue;
+					}
+					bool thisFlowed = false;
+					// For each of the bridges
+					for (TerrainVertex* b : bridges) {
+						// If bridge leads somewhere
+						if (b->GetBridgeEnd() != nullptr) {
+							// Merge this group into other
+							ws.second->MergeInto(m_superWatersheds[*b->GetBridgeEnd()->GetFlowGroup(SUPER)]);
+							// A region has flowed
+							thisFlowed = true;
+						}
+					}
+					if (thisFlowed) {
+						flowed = true;
+						// Add merged key value to list for removal
+						toRemove.push_back(ws.first);
+					}
+				}
+			}
+			// Remove all flowed regions
+			for (int r : toRemove) {
+				m_superWatersheds.erase(r);
 			}
 		}
-		// Remove all flowed regions
-		for (int r : toRemove) {
-			m_superWatersheds.erase(r);
+		// Check for incompletes
+		for (pair<const int, TerrainWaterShed*> tw : m_superWatersheds) {
+			if (!tw.second->IsComplete()) {
+				incomplete = true;
+			}
 		}
 	}
 
@@ -1393,7 +1432,7 @@ void TerrainGraph::ColourWaterGroup() {
 	// For each vertex
 	for (TerrainVertex* v : m_verts) {
 		// ID of the group the vertex is part of
-		int flowGroup = v->GetFlowGroup(SUPER);
+		int flowGroup = *v->GetFlowGroup(SUPER);
 		switch (flowGroup)
 		{
 			// Multiple flow groups
