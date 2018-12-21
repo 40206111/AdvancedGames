@@ -1610,13 +1610,13 @@ void TerrainGraph::ColourRainfallBodies() {
 	for (TerrainVertex* v : m_verts) {
 		switch (v->GetRainType()) {
 		case(RF_LAKE):
-			m_uniqueColours.push_back(glm::vec4(0.1f, 0.1f, 0.3f, 1.0f)); // Super dark blue
+			m_uniqueColours.push_back(glm::vec4(0.2f, 0.2f, 0.6f, 1.0f)); // Super dark blue
 			break;
 		case(RF_FASTRIVER):
-			m_uniqueColours.push_back(glm::vec4(0.5f, 0.5f, 1.0f, 1.0f)); // Light blue
+			m_uniqueColours.push_back(glm::vec4(0.7f, 0.8f, 1.0f, 1.0f)); // Light blue
 			break;
 		case(RF_RIVER):
-			m_uniqueColours.push_back(glm::vec4(0.3f, 0.3f, 0.8f, 1.0f)); // Dark blue
+			m_uniqueColours.push_back(glm::vec4(0.5f, 0.6f, 1.0f, 1.0f)); // Dark blue
 			break;
 		case(RF_SWAMP):
 			m_uniqueColours.push_back(glm::vec4(0.4f, 0.7f, 0.1f, 1.0f)); // Forest green
@@ -1625,7 +1625,7 @@ void TerrainGraph::ColourRainfallBodies() {
 			m_uniqueColours.push_back(glm::vec4(0.1f, 0.4f, 0.2f, 1.0f)); // Forest green
 			break;
 		default:
-			m_uniqueColours.push_back(glm::vec4(0.3f, 0.3f, 0.3f, 1.0f)); // Grey
+			m_uniqueColours.push_back(glm::vec4(0.5f, 0.5f, 0.5f, 1.0f)); // Grey
 			break;
 		}
 	}
