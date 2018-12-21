@@ -49,7 +49,7 @@ TerrainVertex::TerrainVertex() {
 	m_pos = glm::vec3(0.0f);
 	m_normal = glm::vec3(0.0f);
 	m_shape = DEFAULT_V;
-	m_simVal = 0.2f;
+	m_simVal = 0.1f;
 	m_flowTo = nullptr;
 	m_waterShedID = -1;
 	m_superID = -1;
@@ -1705,9 +1705,15 @@ void TerrainGraph::ColourWaterVals() {
 	float colAdd = 0.7f;
 	// For each vertex
 	for (TerrainVertex* v : m_verts) {
-		float frac = v->GetWaterVal() / TerrainVertex::GreatestWaterVal;
+		//float frac = v->GetWaterVal() / TerrainVertex::GreatestWaterVal;
+		float frac = v->GetWaterVal() / 1.0f;
+		if (frac > 1.0f) {
+			frac = 1.0f;
+		}
+
 		// Add colour gradient from green(low) to red(high)
-		m_uniqueColours.push_back(glm::vec4(colMin + sin(frac * M_PI_2) * colAdd, colMin + (1.0f - sin(frac * M_PI_2)) * colAdd, 0.3f, 1.0f));
+		// m_uniqueColours.push_back(glm::vec4(colMin + sin(frac * M_PI_2) * colAdd, colMin + (1.0f - sin(frac * M_PI_2)) * colAdd, 0.3f, 1.0f));
+		m_uniqueColours.push_back(glm::vec4(colMin + frac * colAdd, colMin + (1.0f - frac) * colAdd, 0.3f, 1.0f));
 	}
 	SendColours();
 }
